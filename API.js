@@ -512,15 +512,19 @@ function normalizeAlbumRef(body, url) {
   ));
 }
 
-function buildCreatorAlbumPath(user, subject, albumTitle, fallbackTitle) {
+function buildCreatorAlbumPath(user, subject, albumTitle, fallbackTitle, proteinType) {
   const handle = slugifySegment(
     (user && user.handle) ? String(user.handle) : "unknown_creator"
   ) || "unknown_creator";
 
   const safeSubject = slugifySegment(String(subject || "").trim()) || "Unsorted";
+  const safeProteinType = slugifySegment(String(proteinType || "").trim());
   const baseAlbumTitle = String(albumTitle || fallbackTitle || "Untitled Album").trim();
   const safeAlbumTitle = slugifySegment(baseAlbumTitle) || "Untitled_Album";
 
+  if (safeSubject === "BioMolecules" && safeProteinType) {
+    return normalizeAlbumPath("Creators/" + handle + "/" + safeSubject + "/" + safeProteinType + "/" + safeAlbumTitle);
+  }
   return normalizeAlbumPath("Creators/" + handle + "/" + safeSubject + "/" + safeAlbumTitle);
 }
 
@@ -3738,6 +3742,7 @@ async function apiAdminUploadTrack(request, env) {
 
     const artist = String(firstNonEmpty(form.get("artist"), (user && user.handle) || "SaySay")).trim();
     const subject = String(form.get("subject") || "").trim();
+    const proteinType = String(form.get("protein_type") || "").trim();
     const genre = String(form.get("genre") || "").trim();
     const grade = String(form.get("grade_level") || "").trim();
     const gradeGroup = String(form.get("grade_group") || "").trim();
@@ -3747,6 +3752,10 @@ async function apiAdminUploadTrack(request, env) {
 
     if (!file) {
       return withCors(request, json({ ok: false, error: "file required" }, 400));
+    }
+
+    if (subject === "BioMolecules" && !proteinType) {
+      return withCors(request, json({ ok: false, error: "Protein type required for BioMolecules" }, 400));
     }
 
     if (!isAllowedAudioUpload(file)) {
@@ -3766,7 +3775,7 @@ async function apiAdminUploadTrack(request, env) {
     const fallbackAlbumTitle = albumTitle || inferredTitle || "Untitled Album";
     const safeAlbumPath = rawAlbum
       ? rawAlbum
-      : buildCreatorAlbumPath(user, subject, fallbackAlbumTitle, inferredTitle);
+      : buildCreatorAlbumPath(user, subject, fallbackAlbumTitle, inferredTitle, proteinType);
 
     const cleanTitle = slugifySegment(inferredTitle) || "Untitled";
     const originalExtMatch = String(file.name || "").toLowerCase().match(/\.(mp3|wav|m4a|flac|ogg)$/i);
@@ -3906,6 +3915,7 @@ async function apiAdminUploadCover(request, env) {
     const rawAlbum = normalizeAlbumPath(firstNonEmpty(form.get("album"), form.get("prefix")));
     const artist = String(firstNonEmpty(form.get("artist"), (user && user.handle) || "SaySay")).trim();
     const subject = String(form.get("subject") || "").trim();
+    const proteinType = String(form.get("protein_type") || "").trim();
     const grade = String(form.get("grade_level") || "").trim();
     const gradeGroup = String(form.get("grade_group") || "").trim();
     const albumTitle = String(form.get("album_title") || "").trim();
@@ -3914,13 +3924,16 @@ async function apiAdminUploadCover(request, env) {
     if (!cover) {
       return withCors(request, bad("cover/file required", 400));
     }
+    if (subject === "BioMolecules" && !proteinType) {
+      return withCors(request, bad("Protein type required for BioMolecules", 400));
+    }
     if (!isAllowedCoverUpload(cover)) {
       return withCors(request, bad("Unsupported cover type. Use png, jpg, jpeg, or webp.", 400));
     }
 
     const safeAlbumPath = rawAlbum
       ? rawAlbum
-      : buildCreatorAlbumPath(user, subject, albumTitle || "Untitled Album", "Untitled Album");
+      : buildCreatorAlbumPath(user, subject, albumTitle || "Untitled Album", "Untitled Album", proteinType);
 
     const coverFileName = preferredCoverFilename(cover.name);
     const coverKey = safeAlbumPath + "/" + coverFileName;
