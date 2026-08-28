@@ -1726,6 +1726,59 @@ const headers = new Headers();
   }
 }
 
+async function apiHomeAlbums(request, env) {
+  const u = new URL(request.url);
+  const perSubject = clampInt(
+    u.searchParams.get("per_subject") || "12",
+    12,
+    1,
+    24
+  );
+
+  const rows = await env.DB.prepare(
+    "SELECT id, title, artist, cover_key, created_at, subject, grade_level, grade_group " +
+    "FROM (" +
+      "SELECT a.id, a.title, a.artist, a.cover_key, a.created_at, " +
+      "a.subject, a.grade_level, a.grade_group, " +
+      "ROW_NUMBER() OVER (" +
+        "PARTITION BY COALESCE(NULLIF(TRIM(a.subject), ''), 'Other') " +
+        "ORDER BY a.created_at DESC, a.id DESC" +
+      ") AS subject_rank " +
+      "FROM albums a " +
+      "WHERE a.status = 'published'" +
+    ") ranked " +
+    "WHERE subject_rank <= ? " +
+    "ORDER BY subject COLLATE NOCASE ASC, created_at DESC, id DESC"
+  ).bind(perSubject).all();
+
+  const items = (rows.results || []).map(function(a) {
+    return {
+      id: a.id,
+      title: a.title,
+      artist: a.artist,
+      cover_key: a.cover_key,
+      cover_url: a.cover_key ? buildPublicAudioUrl(a.cover_key) : null,
+      created_at: a.created_at,
+      subject: a.subject || "Other",
+      grade_level: a.grade_level || null,
+      grade_group: a.grade_group || null
+    };
+  });
+
+  const response = json({
+    ok: true,
+    albums: items,
+    per_subject: perSubject
+  });
+
+  response.headers.set(
+    "Cache-Control",
+    "public, max-age=300, s-maxage=900, stale-while-revalidate=86400"
+  );
+
+  return withCors(request, response);
+}
+
 async function apiAlbums(request, env) {
   const u = new URL(request.url);
 
@@ -4475,6 +4528,7 @@ if (path === "/api/me/daily-usage" && request.method === "POST") {
       if (path === "/api/my/likes") return apiMyLikes(request, env);
       if (path === "/api/my/albums") return apiMyAlbums(request, env);
       if (path === "/api/my/tracks") return apiMyTracks(request, env);
+      if (path === "/api/albums/home") return apiHomeAlbums(request, env);
       if (path === "/api/albums") return apiAlbums(request, env);
       if (path.startsWith("/api/albums/")) {
         const albumId = path.slice("/api/albums/".length);
