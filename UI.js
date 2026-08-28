@@ -4002,7 +4002,7 @@ function buildHtml() {
 "  }",
 
 "  function loadHomeAlbums(){",
-"       api("/api/albums/home?per_subject=12", { method:"GET" })",
+"       api(\"/api/albums/home?per_subject=6\", { method:\"GET\" })",
 "      .then(function(out){",
 "        var items = (out && out.albums) ? out.albums : [];",
 "        HOME_ALBUMS = [];",
