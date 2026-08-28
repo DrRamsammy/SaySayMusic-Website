@@ -3901,6 +3901,10 @@ function buildHtml() {
 "      \"Gospel\",\"College_Readiness\",\"Life_After_College\",\"Food_and_Nutrition\",\"Spanish\",\"French\",",
 "      \"Drugs\",\"Entertainment\",\"Others\",",
 "    ];",
+"    Object.keys(bySub).sort().forEach(function(subjectName){",
+"      if (subjectOrder.indexOf(subjectName) === -1) subjectOrder.push(subjectName);",
+"    });",
+"",
 
 "    if(false) wrap.appendChild(makeShelfTitle(\"New Releases\"));",
 "    var rowNew = makeRow();",
@@ -3998,7 +4002,7 @@ function buildHtml() {
 "  }",
 
 "  function loadHomeAlbums(){",
-"    api(\"/api/albums?limit=\" + encodeURIComponent(String(ALBUM_LIMIT)), { method:\"GET\" })",
+"       api("/api/albums/home?per_subject=12", { method:"GET" })",
 "      .then(function(out){",
 "        var items = (out && out.albums) ? out.albums : [];",
 "        HOME_ALBUMS = [];",
