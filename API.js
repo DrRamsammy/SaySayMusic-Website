@@ -1779,6 +1779,59 @@ async function apiHomeAlbums(request, env) {
   return withCors(request, response);
 }
 
+async function apiBioMoleculeAlbums(request, env) {
+  const u = new URL(request.url);
+  const requestedType = String(u.searchParams.get("protein_type") || "").trim();
+  const proteinTypes = {
+    "Enzymes": "enzymes",
+    "Transport Proteins": "transport proteins",
+    "Defense Proteins": "defense proteins",
+    "Structural Proteins": "structural proteins"
+  };
+  const pathSegment = proteinTypes[requestedType];
+
+  if (!pathSegment) return withCors(request, bad("Valid protein_type required", 400));
+
+  const limit = clampInt(u.searchParams.get("limit") || "50", 50, 1, 100);
+  const pathMatch = "%/biomolecules/" + pathSegment + "/%";
+  const directPathMatch = "biomolecules/" + pathSegment + "/%";
+  const rows = await env.DB.prepare(
+    "SELECT a.id, a.title, a.artist, a.cover_key, a.created_at, " +
+    "a.subject, a.grade_level, a.grade_group, a.status " +
+    "FROM albums a " +
+    "WHERE a.status = 'published' " +
+    "AND lower(trim(COALESCE(a.subject, ''))) = 'biomolecules' " +
+    "AND (lower(replace(replace(COALESCE(a.cover_key, ''), '_', ' '), '-', ' ')) LIKE ? " +
+    "OR lower(replace(replace(COALESCE(a.cover_key, ''), '_', ' '), '-', ' ')) LIKE ?) " +
+    "ORDER BY a.title COLLATE NOCASE ASC, a.created_at ASC, a.id ASC LIMIT ?"
+  ).bind(pathMatch, directPathMatch, limit).all();
+
+  const items = (rows.results || []).map(function(a) {
+    return {
+      id: a.id,
+      title: a.title,
+      artist: a.artist,
+      cover_key: a.cover_key,
+      cover_url: a.cover_key ? buildPublicAudioUrl(a.cover_key) : null,
+      created_at: a.created_at,
+      subject: "BioMolecules",
+      protein_type: requestedType,
+      grade_level: a.grade_level || null,
+      grade_group: a.grade_group || null,
+      status: a.status || null
+    };
+  });
+
+  const response = json({
+    ok: true,
+    subject: "BioMolecules",
+    protein_type: requestedType,
+    albums: items
+  });
+  response.headers.set("Cache-Control", "public, max-age=300, s-maxage=900, stale-while-revalidate=86400");
+  return withCors(request, response);
+}
+
 async function apiAlbums(request, env) {
   const u = new URL(request.url);
 
@@ -4529,6 +4582,7 @@ if (path === "/api/me/daily-usage" && request.method === "POST") {
       if (path === "/api/my/albums") return apiMyAlbums(request, env);
       if (path === "/api/my/tracks") return apiMyTracks(request, env);
       if (path === "/api/albums/home") return apiHomeAlbums(request, env);
+      if (path === "/api/albums/biomolecules") return apiBioMoleculeAlbums(request, env);
       if (path === "/api/albums") return apiAlbums(request, env);
       if (path.startsWith("/api/albums/")) {
         const albumId = path.slice("/api/albums/".length);
@@ -4577,4 +4631,3 @@ if (path === "/api/me/daily-usage" && request.method === "POST") {
     }
   },
 };
-
