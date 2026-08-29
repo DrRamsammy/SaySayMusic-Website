@@ -512,18 +512,20 @@ function normalizeAlbumRef(body, url) {
   ));
 }
 
-function buildCreatorAlbumPath(user, subject, albumTitle, fallbackTitle, proteinType) {
+function buildCreatorAlbumPath(user, subject, albumTitle, fallbackTitle, biomoleculeClass, proteinType) {
   const handle = slugifySegment(
     (user && user.handle) ? String(user.handle) : "unknown_creator"
   ) || "unknown_creator";
 
   const safeSubject = slugifySegment(String(subject || "").trim()) || "Unsorted";
+  const safeBiomoleculeClass = slugifySegment(String(biomoleculeClass || "").trim());
   const safeProteinType = slugifySegment(String(proteinType || "").trim());
   const baseAlbumTitle = String(albumTitle || fallbackTitle || "Untitled Album").trim();
   const safeAlbumTitle = slugifySegment(baseAlbumTitle) || "Untitled_Album";
 
-  if (safeSubject === "BioMolecules" && safeProteinType) {
-    return normalizeAlbumPath("Creators/" + handle + "/" + safeSubject + "/" + safeProteinType + "/" + safeAlbumTitle);
+  if (safeSubject === "BioMolecules" && safeBiomoleculeClass) {
+    const proteinFolder = safeBiomoleculeClass === "Protein" && safeProteinType ? ("/" + safeProteinType) : "";
+    return normalizeAlbumPath("Creators/" + handle + "/" + safeSubject + "/" + safeBiomoleculeClass + proteinFolder + "/" + safeAlbumTitle);
   }
   return normalizeAlbumPath("Creators/" + handle + "/" + safeSubject + "/" + safeAlbumTitle);
 }
@@ -1785,20 +1787,30 @@ async function apiHomeAlbums(request, env) {
 
 async function apiBioMoleculeAlbums(request, env) {
   const u = new URL(request.url);
+  const requestedClass = String(u.searchParams.get("biomolecule_class") || "").trim();
   const requestedType = String(u.searchParams.get("protein_type") || "").trim();
+  const biomoleculeClasses = {
+    "Protein": "protein",
+    "Lipids": "lipids",
+    "Carbohydrates": "carbohydrates",
+    "Nucleic Acids": "nucleic acids"
+  };
   const proteinTypes = {
     "Enzymes": "enzymes",
     "Transport Proteins": "transport proteins",
     "Defense Proteins": "defense proteins",
     "Structural Proteins": "structural proteins"
   };
+  const classSegment = biomoleculeClasses[requestedClass];
   const pathSegment = proteinTypes[requestedType];
 
-  if (!pathSegment) return withCors(request, bad("Valid protein_type required", 400));
+  if (!classSegment) return withCors(request, bad("Valid biomolecule_class required", 400));
+  if (requestedClass === "Protein" && !pathSegment) return withCors(request, bad("Valid protein_type required for Protein", 400));
 
   const limit = clampInt(u.searchParams.get("limit") || "50", 50, 1, 100);
-  const pathMatch = "%/biomolecules/" + pathSegment + "/%";
-  const directPathMatch = "biomolecules/" + pathSegment + "/%";
+  const selectedPath = requestedClass === "Protein" ? (classSegment + "/" + pathSegment) : classSegment;
+  const pathMatch = "%/biomolecules/" + selectedPath + "/%";
+  const directPathMatch = "biomolecules/" + selectedPath + "/%";
   const rows = await env.DB.prepare(
     "SELECT a.id, a.title, a.artist, a.cover_key, a.created_at, " +
     "a.subject, a.grade_level, a.grade_group, a.status " +
@@ -1807,7 +1819,9 @@ async function apiBioMoleculeAlbums(request, env) {
     "AND lower(trim(COALESCE(a.subject, ''))) = 'biomolecules' " +
     "AND (lower(replace(replace(COALESCE(a.cover_key, ''), '_', ' '), '-', ' ')) LIKE ? " +
     "OR lower(replace(replace(COALESCE(a.cover_key, ''), '_', ' '), '-', ' ')) LIKE ?) " +
-    "ORDER BY a.title COLLATE NOCASE ASC, a.created_at ASC, a.id ASC LIMIT ?"
+    "ORDER BY CASE WHEN instr(lower(a.title), 'album ') > 0 " +
+    "THEN CAST(substr(a.title, instr(lower(a.title), 'album ') + 6) AS INTEGER) ELSE 999999 END ASC, " +
+    "a.title COLLATE NOCASE ASC, a.created_at ASC, a.id ASC LIMIT ?"
   ).bind(pathMatch, directPathMatch, limit).all();
 
   const items = (rows.results || []).map(function(a) {
@@ -1819,7 +1833,8 @@ async function apiBioMoleculeAlbums(request, env) {
       cover_url: a.cover_key ? buildPublicAudioUrl(a.cover_key) : null,
       created_at: a.created_at,
       subject: "BioMolecules",
-      protein_type: requestedType,
+      biomolecule_class: requestedClass,
+      protein_type: requestedClass === "Protein" ? requestedType : null,
       grade_level: a.grade_level || null,
       grade_group: a.grade_group || null,
       status: a.status || null
@@ -1829,7 +1844,8 @@ async function apiBioMoleculeAlbums(request, env) {
   const response = json({
     ok: true,
     subject: "BioMolecules",
-    protein_type: requestedType,
+    biomolecule_class: requestedClass,
+    protein_type: requestedClass === "Protein" ? requestedType : null,
     albums: items
   });
   response.headers.set("Cache-Control", "public, max-age=300, s-maxage=900, stale-while-revalidate=86400");
@@ -3742,6 +3758,7 @@ async function apiAdminUploadTrack(request, env) {
 
     const artist = String(firstNonEmpty(form.get("artist"), (user && user.handle) || "SaySay")).trim();
     const subject = String(form.get("subject") || "").trim();
+    const biomoleculeClass = String(form.get("biomolecule_class") || "").trim();
     const proteinType = String(form.get("protein_type") || "").trim();
     const genre = String(form.get("genre") || "").trim();
     const grade = String(form.get("grade_level") || "").trim();
@@ -3754,8 +3771,11 @@ async function apiAdminUploadTrack(request, env) {
       return withCors(request, json({ ok: false, error: "file required" }, 400));
     }
 
-    if (subject === "BioMolecules" && !proteinType) {
-      return withCors(request, json({ ok: false, error: "Protein type required for BioMolecules" }, 400));
+    if (subject === "BioMolecules" && !biomoleculeClass) {
+      return withCors(request, json({ ok: false, error: "Biomolecule class required for BioMolecules" }, 400));
+    }
+    if (subject === "BioMolecules" && biomoleculeClass === "Protein" && !proteinType) {
+      return withCors(request, json({ ok: false, error: "Protein type required for Protein" }, 400));
     }
 
     if (!isAllowedAudioUpload(file)) {
@@ -3775,7 +3795,7 @@ async function apiAdminUploadTrack(request, env) {
     const fallbackAlbumTitle = albumTitle || inferredTitle || "Untitled Album";
     const safeAlbumPath = rawAlbum
       ? rawAlbum
-      : buildCreatorAlbumPath(user, subject, fallbackAlbumTitle, inferredTitle, proteinType);
+      : buildCreatorAlbumPath(user, subject, fallbackAlbumTitle, inferredTitle, biomoleculeClass, proteinType);
 
     const cleanTitle = slugifySegment(inferredTitle) || "Untitled";
     const originalExtMatch = String(file.name || "").toLowerCase().match(/\.(mp3|wav|m4a|flac|ogg)$/i);
@@ -3915,6 +3935,7 @@ async function apiAdminUploadCover(request, env) {
     const rawAlbum = normalizeAlbumPath(firstNonEmpty(form.get("album"), form.get("prefix")));
     const artist = String(firstNonEmpty(form.get("artist"), (user && user.handle) || "SaySay")).trim();
     const subject = String(form.get("subject") || "").trim();
+    const biomoleculeClass = String(form.get("biomolecule_class") || "").trim();
     const proteinType = String(form.get("protein_type") || "").trim();
     const grade = String(form.get("grade_level") || "").trim();
     const gradeGroup = String(form.get("grade_group") || "").trim();
@@ -3924,8 +3945,11 @@ async function apiAdminUploadCover(request, env) {
     if (!cover) {
       return withCors(request, bad("cover/file required", 400));
     }
-    if (subject === "BioMolecules" && !proteinType) {
-      return withCors(request, bad("Protein type required for BioMolecules", 400));
+    if (subject === "BioMolecules" && !biomoleculeClass) {
+      return withCors(request, bad("Biomolecule class required for BioMolecules", 400));
+    }
+    if (subject === "BioMolecules" && biomoleculeClass === "Protein" && !proteinType) {
+      return withCors(request, bad("Protein type required for Protein", 400));
     }
     if (!isAllowedCoverUpload(cover)) {
       return withCors(request, bad("Unsupported cover type. Use png, jpg, jpeg, or webp.", 400));
@@ -3933,7 +3957,7 @@ async function apiAdminUploadCover(request, env) {
 
     const safeAlbumPath = rawAlbum
       ? rawAlbum
-      : buildCreatorAlbumPath(user, subject, albumTitle || "Untitled Album", "Untitled Album", proteinType);
+      : buildCreatorAlbumPath(user, subject, albumTitle || "Untitled Album", "Untitled Album", biomoleculeClass, proteinType);
 
     const coverFileName = preferredCoverFilename(cover.name);
     const coverKey = safeAlbumPath + "/" + coverFileName;
