@@ -1814,18 +1814,23 @@ async function apiBioMoleculeAlbums(request, env) {
   const selectedPath = classSegment + "/" + pathSegment;
   const pathMatch = "%/biomolecules/" + selectedPath + "/%";
   const directPathMatch = "biomolecules/" + selectedPath + "/%";
+  const legacySelectedPath = requestedClass === "Protein" ? pathSegment : selectedPath;
+  const legacyPathMatch = "%/biomolecules/" + legacySelectedPath + "/%";
+  const legacyDirectPathMatch = "biomolecules/" + legacySelectedPath + "/%";
   const rows = await env.DB.prepare(
     "SELECT a.id, a.title, a.artist, a.cover_key, a.created_at, " +
     "a.subject, a.grade_level, a.grade_group, a.status " +
     "FROM albums a " +
-    "WHERE a.status = 'published' " +
+    "WHERE (a.status IS NULL OR (a.status != 'archived' AND a.status != 'pending_review')) " +
     "AND lower(trim(COALESCE(a.subject, ''))) = 'biomolecules' " +
     "AND (lower(replace(replace(COALESCE(a.cover_key, ''), '_', ' '), '-', ' ')) LIKE ? " +
+    "OR lower(replace(replace(COALESCE(a.cover_key, ''), '_', ' '), '-', ' ')) LIKE ? " +
+    "OR lower(replace(replace(COALESCE(a.cover_key, ''), '_', ' '), '-', ' ')) LIKE ? " +
     "OR lower(replace(replace(COALESCE(a.cover_key, ''), '_', ' '), '-', ' ')) LIKE ?) " +
     "ORDER BY CASE WHEN instr(lower(a.title), 'album ') > 0 " +
     "THEN CAST(substr(a.title, instr(lower(a.title), 'album ') + 6) AS INTEGER) ELSE 999999 END ASC, " +
     "a.title COLLATE NOCASE ASC, a.created_at ASC, a.id ASC LIMIT ?"
-  ).bind(pathMatch, directPathMatch, limit).all();
+  ).bind(pathMatch, directPathMatch, legacyPathMatch, legacyDirectPathMatch, limit).all();
 
   const items = (rows.results || []).map(function(a) {
     return {
