@@ -1,0 +1,19 @@
+name = "saysay-learning-games-api"
+main = "worker.js"
+compatibility_date = "2026-09-03"
+
+# After creating the D1 database in Cloudflare, replace the placeholder below.
+[[d1_databases]]
+binding = "DB"
+database_name = "saysay-learning-games"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+# Optional media storage for future diagram/image games.
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "saysay-learning-games-media"
+
+# Recommended production routes:
+# games.saysaymusic.com      -> customer application
+# games-admin.saysaymusic.com -> protected creator application
+# games-api.saysaymusic.com   -> this Worker API
