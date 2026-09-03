@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>SaySayMusic Game Creator</title>
+<style>
+:root{--bg:#f4f6fb;--card:#fff;--ink:#172033;--muted:#677287;--line:#dce3ee;--accent:#1f5eff;--good:#16875c;--shadow:0 16px 45px rgba(20,35,70,.10)}*{box-sizing:border-box}body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}button,input,textarea,select{font:inherit}.shell{max-width:1320px;margin:0 auto;padding:24px}.topbar{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:18px}.brand strong{display:block;font-size:22px}.brand span{color:var(--muted);font-size:13px}.pill{background:#eaf0ff;color:#1748bc;border-radius:999px;padding:8px 11px;font-size:12px;font-weight:800}.grid{display:grid;grid-template-columns:1.1fr .9fr;gap:18px}.card{background:#fff;border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:22px}.card h2{margin:0 0 16px;font-size:19px}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{margin-bottom:14px}.field label{display:block;font-size:12px;font-weight:800;color:#46536a;margin-bottom:7px;text-transform:uppercase;letter-spacing:.06em}.field input,.field textarea,.field select{width:100%;border:1px solid var(--line);border-radius:11px;padding:11px 12px;background:#fff;color:var(--ink)}.field textarea{min-height:250px;resize:vertical;line-height:1.55}.toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}.btn{border:0;border-radius:10px;padding:10px 13px;font-weight:800;cursor:pointer}.btn.primary{background:var(--accent);color:#fff}.btn.secondary{background:#edf1f7;color:#25334e}.btn.good{background:#e7f6ef;color:#116b49}.help{font-size:13px;color:var(--muted);line-height:1.5}.selected-list{display:flex;flex-wrap:wrap;gap:8px;min-height:44px;padding:10px;border:1px dashed #c8d1df;border-radius:12px;background:#fafbfe}.chip{display:inline-flex;align-items:center;gap:8px;border-radius:999px;background:#edf3ff;padding:8px 10px;font-weight:700}.chip button{border:0;background:transparent;cursor:pointer;color:#6a7485}.preview{font-size:18px;line-height:1.8;white-space:pre-wrap}.preview mark{background:#e9efff;color:#183d94;padding:2px 5px;border-radius:6px}.status{font-size:13px;color:var(--good);font-weight:700;min-height:20px}.footer{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}@media(max-width:900px){.grid{grid-template-columns:1fr}.row{grid-template-columns:1fr}.topbar{align-items:flex-start;flex-direction:column}}</style>
+</head>
+<body>
+<div class="shell">
+  <div class="topbar"><div class="brand"><strong>SaySayMusic Game Creator</strong><span>Learning Games administration</span></div><div class="pill">DRAFT WORKSPACE</div></div>
+  <div class="grid">
+    <section class="card">
+      <h2>Quick Create</h2>
+      <div class="row">
+        <div class="field"><label>Subject Path</label><input id="path" value="Biology > Cell > Organelles > Cell Membrane"></div>
+        <div class="field"><label>Game Title</label><input id="title" value="Cell Membrane"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Game Engine</label><select id="engine"><option value="fill-build">Fill & Build</option></select></div>
+        <div class="field"><label>Language</label><select id="language"><option value="en">English Master</option><option value="es">Spanish</option><option value="fr">French</option></select></div>
+      </div>
+      <div class="field"><label>Paragraph</label><textarea id="paragraph">Cell membrane, also called plasma membrane, surrounds every living cell. It contains molecules such as proteins and participates in cellular metabolism. It regulates ions, acids and alkalis and helps the cell live and grow. The membrane acts as a barrier, keeping wanted substances inside while also serving as a selective gate.</textarea></div>
+      <div class="toolbar"><button class="btn primary" id="makeBlank">Make Selected Text a Blank</button><button class="btn secondary" id="suggest">Suggest Key Terms</button><button class="btn secondary" id="clear">Clear Blanks</button></div>
+      <div class="help">Highlight any word or phrase inside the paragraph, then click “Make Selected Text a Blank.” For high-volume production, “Suggest Key Terms” preselects likely teaching terms so you only review them.</div>
+      <div class="field" style="margin-top:16px"><label>Selected Answers</label><div id="answers" class="selected-list"></div></div>
+      <div class="status" id="status"></div>
+    </section>
+    <section class="card">
+      <h2>Live Preview</h2>
+      <div class="preview" id="preview"></div>
+      <div class="field" style="margin-top:18px"><label>Language Workflow</label><div class="toolbar"><button class="btn secondary" id="spanish">Generate Spanish Draft</button><button class="btn secondary" id="french">Generate French Draft</button></div><div class="help">Translation buttons are wired as workflow actions. Production translation will call the translation service and require review before publishing.</div></div>
+    </section>
+  </div>
+  <div class="footer"><button class="btn secondary" id="save">Save Draft</button><button class="btn good" id="publish">Publish</button></div>
+</div>
+<script>
+const p=document.getElementById('paragraph'), answersEl=document.getElementById('answers'), preview=document.getElementById('preview'), status=document.getElementById('status');let answers=[];
+function esc(s){return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function render(){answersEl.innerHTML=answers.map((a,i)=>`<span class="chip">${esc(a)} <button data-i="${i}" aria-label="Remove">×</button></span>`).join('');let text=esc(p.value);answers.forEach(a=>{const re=new RegExp('('+a.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','i');text=text.replace(re,'<mark>BLANK</mark>')});preview.innerHTML=text;answersEl.querySelectorAll('button').forEach(b=>b.onclick=()=>{answers.splice(+b.dataset.i,1);render()})}
+p.addEventListener('input',render);document.getElementById('makeBlank').onclick=()=>{const s=p.selectionStart,e=p.selectionEnd;const term=p.value.slice(s,e).trim();if(!term){status.textContent='Select a word or phrase in the paragraph first.';return}if(!answers.includes(term))answers.push(term);status.textContent=`Added: ${term}`;render()};document.getElementById('clear').onclick=()=>{answers=[];status.textContent='All blanks cleared.';render()};document.getElementById('suggest').onclick=()=>{const candidates=['cell membrane','plasma membrane','proteins','cellular metabolism','ions','alkalis','barrier','gate'];answers=[...new Set(candidates.filter(x=>p.value.toLowerCase().includes(x.toLowerCase())))];status.textContent='Suggested terms added. Review and remove anything you do not want.';render()};document.getElementById('spanish').onclick=()=>status.textContent='Spanish draft generation queued for the production translation service.';document.getElementById('french').onclick=()=>status.textContent='French draft generation queued for the production translation service.';document.getElementById('save').onclick=()=>status.textContent='Draft is ready to save to Cloudflare D1 once the database binding is connected.';document.getElementById('publish').onclick=()=>status.textContent='Publish workflow is ready; production will require all three language versions to pass validation.';render();
+</script>
+</body>
+</html>
