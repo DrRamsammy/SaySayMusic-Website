@@ -1,0 +1,26 @@
+{
+  "slug": "cell-membrane-001",
+  "engine": "fill-build",
+  "path": ["Biology", "Cell", "Organelles", "Cell Membrane"],
+  "difficulty": "introductory",
+  "languages": {
+    "en": {
+      "title": "Cell Membrane",
+      "instructions": "Drag or tap each word into the blank where it belongs.",
+      "passage": "Cell membrane, also called [[plasma]], surrounds every living cell. It contains molecules such as [[proteins]] and participates in [[cellular]] metabolism. It regulates ions, acids and [[alkalis]] and helps the cell live and [[grow]]. The membrane acts as a [[barrier]], keeping [[wanted]] substances inside while also serving as a selective [[gate]].",
+      "answers": ["plasma", "proteins", "cellular", "alkalis", "grow", "barrier", "wanted", "gate"]
+    },
+    "es": {
+      "title": "Membrana celular",
+      "instructions": "Arrastra o toca cada palabra y colócala en el espacio correcto.",
+      "passage": "La membrana celular, también llamada membrana [[plasmática]], rodea cada célula viva. Contiene moléculas como [[proteínas]] y participa en el metabolismo [[celular]]. Regula iones, ácidos y [[álcalis]] y ayuda a la célula a vivir y [[crecer]]. La membrana actúa como una [[barrera]], mantiene sustancias [[necesarias]] dentro y también funciona como una [[puerta]] selectiva.",
+      "answers": ["plasmática", "proteínas", "celular", "álcalis", "crecer", "barrera", "necesarias", "puerta"]
+    },
+    "fr": {
+      "title": "Membrane cellulaire",
+      "instructions": "Faites glisser ou touchez chaque mot pour le placer dans l'espace correct.",
+      "passage": "La membrane cellulaire, aussi appelée membrane [[plasmique]], entoure chaque cellule vivante. Elle contient des molécules comme les [[protéines]] et participe au métabolisme [[cellulaire]]. Elle régule les ions, les acides et les [[alcalis]] et aide la cellule à vivre et à [[croître]]. La membrane agit comme une [[barrière]], conserve les substances [[nécessaires]] à l'intérieur et fonctionne aussi comme une [[porte]] sélective.",
+      "answers": ["plasmique", "protéines", "cellulaire", "alcalis", "croître", "barrière", "nécessaires", "porte"]
+    }
+  }
+}
