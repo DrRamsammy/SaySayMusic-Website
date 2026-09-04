@@ -340,6 +340,7 @@ function buildHtml() {
 "          <button class=\"btn\" id=\"btnTrending\">🔥 Trending</button>",
 "          <button class=\"btn\" id=\"btnAll\">📚 All</button>",
 "          <button class=\"btn\" id=\"btnMusic\">🎵 Music</button>",
+"          <button class=\"btn\" id=\"btnLearningGames\" onclick=\"window.open('https://saysayeducation.com','_blank','noopener')\">🎮 Learning Games</button>",
 "        <button class=\"btn\" id=\"btnGlobal\">📚 Books</button>",
 "          <button class=\"btn\" id=\"btnPortal\" onclick=\"window.open('https://portal.saysaymusic.com','_blank','noopener')\">🧑‍💼 Consultant Portal</button>",
 "          <button class=\"btn\" id=\"btnStudio\">🛠️ Studio</button>",
