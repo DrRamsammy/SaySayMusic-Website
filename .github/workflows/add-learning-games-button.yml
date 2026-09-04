@@ -1,0 +1,38 @@
+name: Add Learning Games button
+
+on:
+  push:
+    paths:
+      - '.github/workflows/add-learning-games-button.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  update-ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add Learning Games button to UI
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('UI.js')
+          s = p.read_text()
+          old = '"          <button class=\\"btn\\" id=\\"btnMusic\\">🎵 Music</button>",\n"        <button class=\\"btn\\" id=\\"btnGlobal\\">📚 Books</button>",'
+          new = '"          <button class=\\"btn\\" id=\\"btnMusic\\">🎵 Music</button>",\n"          <button class=\\"btn\\" id=\\"btnLearningGames\\" onclick=\\"window.open(\'https://saysayeducation.com\',\'_blank\',\'noopener\')\\">🎮 Learning Games</button>",\n"        <button class=\\"btn\\" id=\\"btnGlobal\\">📚 Books</button>",'
+          if 'id=\\"btnLearningGames\\"' in s:
+              print('Learning Games button already present')
+          elif old not in s:
+              raise SystemExit('Expected Music/Books navigation block not found; no change made')
+          else:
+              p.write_text(s.replace(old, new, 1))
+          PY
+      - name: Commit UI update
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add UI.js
+          git commit -m "Add Learning Games navigation button"
+          git push
