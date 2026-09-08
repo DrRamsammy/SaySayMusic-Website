@@ -44,7 +44,12 @@ async function runText(env, prompt, maxTokens) {
     max_tokens: maxTokens || 3000,
     temperature: 0.35
   });
-  return result && (result.response || result.output_text || result.result);
+  return result && (
+    result.response ||
+    result.output_text ||
+    (result.choices && result.choices[0] && result.choices[0].message && result.choices[0].message.content) ||
+    result.result
+  );
 }
 
 async function makePlan(request, env) {
