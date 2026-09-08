@@ -11,6 +11,7 @@
 
 const FIXED_ORIGINS = new Set([
   "https://app.saysaymusic.com",
+  "https://musicbuilder.saysaymusic.com",
   "https://studio.saysaymusic.com",
   "https://saysaymusic.com",
   "https://www.saysaymusic.com",
