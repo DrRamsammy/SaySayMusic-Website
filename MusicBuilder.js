@@ -5,7 +5,7 @@
  */
 
 const APP_API = "https://stream.saysaymusic.com";
-const TEXT_MODEL = "@cf/openai/gpt-oss-20b";
+const TEXT_MODEL = "@cf/meta/llama-3.1-8b-instruct";
 const IMAGE_MODEL = "@cf/black-forest-labs/flux-1-schnell";
 
 function json(value, status) {
@@ -41,7 +41,7 @@ async function runText(env, prompt, maxTokens) {
       { role: "system", content: "You are the SaySayMusic college-level educational music editor. Follow the requested JSON format exactly." },
       { role: "user", content: prompt }
     ],
-    max_tokens: maxTokens || 5000,
+    max_tokens: maxTokens || 3000,
     temperature: 0.35
   });
   return result && (result.response || result.output_text || result.result);
@@ -62,7 +62,7 @@ async function makePlan(request, env) {
     "Do not omit essential material and do not duplicate topics.",
     'Return ONLY JSON: {"albums":[{"title":"' + topic + ' Album 1: Descriptive Title","songs":[{"title":"Scientific Subtopic"}]}]}'
   ].join("\n");
-  const data = extractJson(await runText(env, prompt, 6000));
+  const data = extractJson(await runText(env, prompt, 3000));
   if (!Array.isArray(data.albums) || !data.albums.length) throw new Error("No album plan was returned.");
   return json(data);
 }
@@ -88,7 +88,7 @@ async function makeSong(request, env) {
     "The final tag includes SaySayMusic and Education Through Melody.",
     'Return ONLY JSON: {"genre":"Complete musical direction","lyrics":"Complete lyrics with section labels"}'
   ].join("\n");
-  const data = extractJson(await runText(env, prompt, 7500));
+  const data = extractJson(await runText(env, prompt, 4000));
   if (!data.genre || !data.lyrics) throw new Error("The AI did not return a complete song.");
   return json(data);
 }
