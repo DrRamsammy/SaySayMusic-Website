@@ -5,7 +5,7 @@
  */
 
 const APP_API = "https://stream.saysaymusic.com";
-const TEXT_MODEL = "@cf/meta/llama-3.1-8b-instruct";
+const TEXT_MODEL = "@cf/openai/gpt-oss-20b";
 const IMAGE_MODEL = "@cf/black-forest-labs/flux-1-schnell";
 
 function json(value, status) {
@@ -134,7 +134,7 @@ header{background:#fff;border-bottom:1px solid var(--line);padding:14px 20px}.he
  function note(s){document.getElementById("notice").innerHTML=s?'<div class="notice">'+esc(s)+'</div>':""}
  function totals(){var total=0,done=0;if(plan)plan.albums.forEach(function(a){total+=a.songs.length;a.songs.forEach(function(s){if(s.completed)done++})});return{total:total,done:done}}
  function chrome(){var t=totals(),p=t.total?Math.round(t.done/t.total*100):0;document.getElementById("progress").innerHTML=plan?'<div class="progress"><b>'+esc(plan.topic)+'</b><span style="float:right"><b>'+t.done+" of "+t.total+'</b> complete</span><div class="bar"><div class="fill" style="width:'+p+'%"></div></div></div>':"";document.getElementById("newBtn").hidden=!plan;document.querySelectorAll(".tab").forEach(function(b){b.classList.toggle("active",b.dataset.tab===tab);b.disabled=b.dataset.tab!=="topics"&&!(plan&&plan.approved)})}
- async function call(path,body){var r=await fetch(API+path,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)}),d=await r.json();if(!r.ok)throw Error(d.error||"Request failed");return d}
+ async function call(path,body){var r=await fetch(API+path,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)}),raw=await r.text(),d;try{d=JSON.parse(raw)}catch(e){throw Error("Cloudflare error "+r.status+". Check the Worker live log.")}if(!r.ok)throw Error(d.error||"Request failed");return d}
  function render(){chrome();if(tab==="topics")topics();else if(tab==="songs")songs();else cover()}
  function topics(){var v=document.getElementById("view");if(!plan){v.innerHTML='<section class="card center"><h2>Enter your main topic</h2><label>Main topic</label><input id="topic" class="input" placeholder="Example: Triglycerides"><label>Education level</label><select id="level"><option>College / Medical School</option><option>High School</option><option>Middle School</option><option>Elementary School</option></select><button id="makePlan" class="btn wide">✨ Create Albums and Song List</button></section>';document.getElementById("makePlan").onclick=makePlan;return}var h='<section class="card"><h2>'+esc(plan.topic)+'</h2><div class="plan">';plan.albums.forEach(function(a,x){h+='<article class="album"><h3>'+esc(a.title)+'</h3><ol>';a.songs.forEach(function(s){h+='<li>'+esc(s.title)+'</li>'});h+='</ol></article>'});h+='</div>'+(plan.approved?'<button id="toSongs" class="btn wide">Continue to Songs</button>':'<button id="approve" class="btn green wide">✓ Approve Album Plan</button>')+'</section>';v.innerHTML=h;(document.getElementById("approve")||document.getElementById("toSongs")).onclick=function(){plan.approved=true;save();tab="songs";render()}}
  async function makePlan(){if(busy)return;var topic=document.getElementById("topic").value.trim();if(!topic){note("Enter a topic first.");return}level=document.getElementById("level").value;busy=true;note("AI is creating the complete album plan…");try{var d=await call("/plan",{topic:topic,level:level});plan={topic:topic,albums:d.albums,approved:false};save();note("");render()}catch(e){note(e.message)}finally{busy=false}}
