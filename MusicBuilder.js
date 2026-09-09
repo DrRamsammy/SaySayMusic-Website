@@ -1,4 +1,4 @@
-/**// SaySayMusic Builder — automatic deployment test
+/**
  * SaySayMusic AI Music Builder
  * Separate Cloudflare Worker for musicbuilder.saysaymusic.com
  * Required binding: Workers AI as AI
