@@ -1,0 +1,10 @@
+name = "saysay-music-builder"
+main = "MusicBuilder.js"
+compatibility_date = "2026-09-09"
+
+routes = [
+  { pattern = "musicbuilder.saysaymusic.com", custom_domain = true }
+]
+
+[ai]
+binding = "AI"
