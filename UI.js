@@ -4045,7 +4045,13 @@ function buildHtml() {
 "        if(b){",
 "          b.disabled=false;",
 "          if (sub === \"Entertainment\"){",
-"            b.onclick=function(){ renderAlbumGrid(entertainmentAlbums, \"Entertainment & Specials\", entertainmentAlbums.length ? (\"Showing all albums in Entertainment & Specials.\") : \"No entertainment albums found.\"); };",
+"            b.onclick=function(){
+  VIEW.subject = "Entertainment";
+  VIEW.q = "";
+  VIEW.grade_level = "";
+  VIEW.grade_group = "";
+  loadBrowse();
+};
 "          } else {",
 "            (function(subjectName){",
 "              b.onclick=function(){",
