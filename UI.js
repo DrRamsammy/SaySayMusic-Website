@@ -4045,13 +4045,13 @@ function buildHtml() {
 "        if(b){",
 "          b.disabled=false;",
 "          if (sub === \"Entertainment\"){",
-"            b.onclick=function(){
-  VIEW.subject = "Entertainment";
-  VIEW.q = "";
-  VIEW.grade_level = "";
-  VIEW.grade_group = "";
-  loadBrowse();
-};
+"          b.onclick=function(){",
+"              VIEW.subject = \"Entertainment\";",
+"              VIEW.q = \"\";",
+"              VIEW.grade_level = \"\";",
+"              VIEW.grade_group = \"\";",
+"              showSubjectAll(\"Entertainment\");",
+"            };", 
 "          } else {",
 "            (function(subjectName){",
 "              b.onclick=function(){",
