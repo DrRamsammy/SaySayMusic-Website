@@ -5,7 +5,7 @@ const DESKTOP_CSS = String.raw`
 body.ss-redesign .wrap{max-width:1480px!important;margin:0 auto!important;padding:12px 18px 28px!important}
 body.ss-redesign .top{min-height:78px!important;grid-template-columns:minmax(315px,1fr) auto auto auto!important;gap:14px!important;padding:10px 16px!important;border-radius:0!important;border-left:0!important;border-right:0!important;border-top:0!important;background:linear-gradient(90deg,#090b0e,#080a0d)!important}
 body.ss-redesign .top .logo{width:58px!important;height:58px!important;min-width:58px!important}body.ss-redesign .top .logo img{width:58px!important;height:58px!important}body.ss-redesign .top .title{font-size:28px!important;line-height:1.02!important;white-space:nowrap!important}
-#ssProductNav{gap:9px!important}#ssProductNav .btn{min-height:46px!important;padding:9px 16px!important;border-radius:9px!important;font-size:14px!important;display:inline-flex!important;align-items:center!important;gap:8px!important}#ssProductNav #btnMusic{font-size:0!important}#ssProductNav #btnMusic:before{content:'♫';font-size:21px!important;font-weight:900!important}#ssProductNav #btnMusic:after{content:'Music';font-size:14px!important;font-weight:900!important}
+#ssProductNav{gap:9px!important}#ssProductNav .btn{min-height:46px!important;padding:9px 18px!important;border-radius:9px!important;font-size:15px!important;font-weight:800!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:0!important}#ssProductNav .btn:before,#ssProductNav .btn:after{display:none!important;content:none!important}#ssProductNav #btnMusic{display:none!important}
 #ssAccountButton{min-height:46px!important;border-radius:9px!important}body.ss-redesign #authRow{gap:7px!important}
 body.ss-redesign .grid{grid-template-columns:300px minmax(0,1fr)!important;gap:22px!important;margin-top:16px!important}body.ss-redesign .grid>.card{border-radius:14px!important;box-shadow:none!important}body.ss-redesign .grid>.card:first-child h3{font-size:20px!important;padding:14px 14px 10px!important}body.ss-redesign .grid>.card:first-child .body{padding:0 14px 18px!important}#ssNowArt{border-radius:13px!important;margin-bottom:12px!important;width:100%!important;aspect-ratio:1/1!important;object-fit:cover!important}body.ss-redesign #npTitle{font-size:19px!important}
 body.ss-redesign .rightHeader{padding:0 0 12px!important;background:transparent!important;border:0!important}body.ss-redesign .rightHeader .row.ssDiscoveryNav{grid-template-columns:minmax(320px,1fr) 145px 145px 115px!important;gap:12px!important}body.ss-redesign .rightHeader .row.ssDiscoveryNav #search,body.ss-redesign .rightHeader .row.ssDiscoveryNav #btnHome,body.ss-redesign .rightHeader .row.ssDiscoveryNav #btnSubject,body.ss-redesign .rightHeader .row.ssDiscoveryNav #btnAll{min-height:44px!important;border-radius:9px!important;font-size:14px!important}
@@ -19,37 +19,20 @@ body.ss-redesign .grid>.card:last-child{border:0!important;background:transparen
 
 const DESKTOP_JS = String.raw`
 (function(){
- const approved={
-  'Math':['▦','Math'],
-  'SAT':['SAT','SAT'],
-  'Biology':['♧','Biology'],
-  'Chemistry':['♙','Chemistry'],
-  'Microbiology':['☼','Microbiology'],
-  'Anatomy & Physiology':['♧','Anatomy & Physiology'],
-  'Food & Nutrition':['●','Food & Nutrition'],
-  'Languages':['◉','Languages'],
-  'Life After College':['▣','Life After College']
- };
+ function cleanTopNav(){
+  var labels={btnLearningGames:'Learning Games',btnMusicBuilder:'Music Builder',btnGlobal:'Books'};
+  Object.keys(labels).forEach(function(id){var b=document.getElementById(id);if(b)b.textContent=labels[id];});
+ }
  function fixSubjects(){
   document.querySelectorAll('.ssSubjectCard').forEach(function(card){
-   var label=card.querySelector('span:last-child'); if(!label)return;
-   var name=(label.textContent||'').trim();
-   var icon=card.querySelector('.ssSubjectIcon');
-   if(!icon)return;
+   var label=card.querySelector('span:last-child');if(!label)return;var name=(label.textContent||'').trim();var icon=card.querySelector('.ssSubjectIcon');if(!icon)return;
    if(name==='SAT'){icon.textContent='SAT';icon.style.fontSize='24px';icon.style.fontWeight='900';}
-   else if(name==='Math'){icon.textContent='▦';}
-   else if(name==='Biology'){icon.textContent='⚕';}
-   else if(name==='Chemistry'){icon.textContent='⚗';}
-   else if(name==='Microbiology'){icon.textContent='☼';}
-   else if(name==='Anatomy & Physiology'){icon.textContent='♙';}
-   else if(name==='Food & Nutrition'){icon.textContent='●';}
-   else if(name==='Languages'){icon.textContent='◉';}
-   else if(name==='Life After College'){icon.textContent='▣';}
+   else if(name==='Math'){icon.textContent='▦';}else if(name==='Biology'){icon.textContent='⚕';}else if(name==='Chemistry'){icon.textContent='⚗';}else if(name==='Microbiology'){icon.textContent='☼';}else if(name==='Anatomy & Physiology'){icon.textContent='♙';}else if(name==='Food & Nutrition'){icon.textContent='●';}else if(name==='Languages'){icon.textContent='◉';}else if(name==='Life After College'){icon.textContent='▣';}
   });
  }
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',fixSubjects);else fixSubjects();
- setTimeout(fixSubjects,400);setTimeout(fixSubjects,1200);
- new MutationObserver(fixSubjects).observe(document.documentElement,{childList:true,subtree:true});
+ function apply(){cleanTopNav();fixSubjects();}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',apply);else apply();setTimeout(apply,400);setTimeout(apply,1200);
+ new MutationObserver(apply).observe(document.documentElement,{childList:true,subtree:true});
 })();
 `;
 export default {async fetch(request,env,ctx){const response=await app.fetch(request,env,ctx);const type=response.headers.get("content-type")||"";if(!type.includes("text/html"))return response;let html=await response.text();const tag=`<style id="ss-desktop-target">${DESKTOP_CSS}</style><script id="ss-desktop-target-js">${DESKTOP_JS}</script>`;html=html.includes("</head>")?html.replace("</head>",tag+"</head>"):tag+html;return new Response(html,{status:response.status,statusText:response.statusText,headers:response.headers});}};
