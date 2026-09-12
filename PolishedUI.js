@@ -55,9 +55,14 @@ const POLISH_JS = String.raw`
     var menu=byId('ssAccountMenu');
     var auth=byId('authRow');
     if(menu&&auth){
-      var logout=null,buttons=auth.querySelectorAll('button');
-      for(var i=0;i<buttons.length;i++){if(/logout/i.test(buttons[i].textContent||'')){logout=buttons[i];break}}
-      if(logout&&logout.parentNode!==menu){logout.textContent='↪ Log out';menu.appendChild(logout)}
+      var buttons=auth.querySelectorAll('button');
+      for(var i=0;i<buttons.length;i++){
+        var label=String(buttons[i].textContent||'').trim();
+        if(/^log in$/i.test(label)||/^sign up$/i.test(label)||/^logout$/i.test(label)||/^log out$/i.test(label)){
+          if(/^logout$/i.test(label))buttons[i].textContent='Log Out';
+          if(buttons[i].parentNode!==menu)menu.appendChild(buttons[i]);
+        }
+      }
     }
   }
   function boot(){polishHeader();var a=byId('authRow');if(a)new MutationObserver(function(){setTimeout(polishHeader,20)}).observe(a,{childList:true,subtree:true});setTimeout(polishHeader,300);setTimeout(polishHeader,1200)}
