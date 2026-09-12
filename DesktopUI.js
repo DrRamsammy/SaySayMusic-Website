@@ -1,4 +1,5 @@
-import app from "./PolishedUI.js";
+import desktopApp from "./PolishedUI.js";
+import mobileApp from "./UI.js";
 
 const DESKTOP_CSS = String.raw`
 @media (min-width:981px){
@@ -21,10 +22,7 @@ const DESKTOP_JS = String.raw`
 (function(){
  function cleanTopNav(){
   var labels={btnLearningGames:'Learning Games',btnMusicBuilder:'Music Builder',btnGlobal:'Books'};
-  Object.keys(labels).forEach(function(id){
-   var b=document.getElementById(id);
-   if(b && b.textContent!==labels[id]) b.textContent=labels[id];
-  });
+  Object.keys(labels).forEach(function(id){var b=document.getElementById(id);if(b&&b.textContent!==labels[id])b.textContent=labels[id];});
  }
  function cleanName(raw){
   raw=(raw||'').trim();
@@ -32,19 +30,24 @@ const DESKTOP_JS = String.raw`
   for(var i=0;i<names.length;i++){if(raw.indexOf(names[i])!==-1)return names[i];}
   return raw.replace(/^[^A-Za-z0-9]+\s*/,'').trim();
  }
- function fixSubjects(){
-  document.querySelectorAll('.ssSubjectCard').forEach(function(card){
-   var label=card.querySelector('span:last-child');
-   if(!label)return;
-   var name=cleanName(label.textContent);
-   if(label.textContent!==name) label.textContent=name;
-  });
- }
+ function fixSubjects(){document.querySelectorAll('.ssSubjectCard').forEach(function(card){var label=card.querySelector('span:last-child');if(!label)return;var name=cleanName(label.textContent);if(label.textContent!==name)label.textContent=name;});}
  function apply(){cleanTopNav();fixSubjects();}
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',apply);else apply();
- setTimeout(apply,500);
- setTimeout(apply,1500);
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',apply);else apply();setTimeout(apply,500);setTimeout(apply,1500);
 })();
 `;
 
-export default {async fetch(request,env,ctx){const response=await app.fetch(request,env,ctx);const type=response.headers.get("content-type")||"";if(!type.includes("text/html"))return response;let html=await response.text();const tag=`<style id="ss-desktop-target">${DESKTOP_CSS}</style><script id="ss-desktop-target-js">${DESKTOP_JS}</script>`;html=html.includes("</head>")?html.replace("</head>",tag+"</head>"):tag+html;return new Response(html,{status:response.status,statusText:response.statusText,headers:response.headers});}};
+function isMobileRequest(request){
+ const ua=request.headers.get('user-agent')||'';
+ return /Android|iPhone|iPod|Mobile|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+}
+
+export default {async fetch(request,env,ctx){
+ if(isMobileRequest(request)) return mobileApp.fetch(request,env,ctx);
+ const response=await desktopApp.fetch(request,env,ctx);
+ const type=response.headers.get("content-type")||"";
+ if(!type.includes("text/html"))return response;
+ let html=await response.text();
+ const tag=`<style id="ss-desktop-target">${DESKTOP_CSS}</style><script id="ss-desktop-target-js">${DESKTOP_JS}</script>`;
+ html=html.includes("</head>")?html.replace("</head>",tag+"</head>"):tag+html;
+ return new Response(html,{status:response.status,statusText:response.statusText,headers:response.headers});
+}};
