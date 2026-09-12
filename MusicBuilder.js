@@ -409,13 +409,20 @@ header{background:#fff;border-bottom:1px solid var(--line);padding:14px 20px}.he
 })();
 </script></body></html>`;
 
+const ACCESS_PAGE = String.raw`<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Music Builder Access • SaySayMusic</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:linear-gradient(145deg,#05070a,#0b1830);color:#fff;font:18px/1.55 Arial,sans-serif}.card{width:min(720px,100%);padding:42px;border:1px solid rgba(241,184,45,.55);border-radius:24px;background:#0d1420;box-shadow:0 28px 80px #0009;text-align:center}.logo{width:88px;height:88px;object-fit:contain;margin-bottom:14px}h1{margin:0 0 14px;font-size:38px;color:#f1b82d;line-height:1.12}p{margin:0 auto 24px;max-width:580px;color:#d9e2ef}.btn{display:inline-flex;align-items:center;justify-content:center;min-height:58px;padding:14px 26px;border-radius:12px;background:#f1b82d;color:#111;text-decoration:none;font-weight:900;font-size:18px}.help{margin-top:22px;font-size:15px;color:#aebbd0}@media(max-width:600px){.card{padding:28px 20px}h1{font-size:30px}.btn{width:100%}}
+</style></head><body><main class="card"><img class="logo" src="${LOGO_URL}" alt="SaySayMusic"><h1>Music Builder Login Required</h1><p>Music Builder is available to authorized SaySayMusic Creator, Artist, and Administrator accounts. Log in to the SaySayMusic platform, then select Music Builder again.</p><a class="btn" href="https://app.saysaymusic.com/?login=1">Return to SaySayMusic and Log In</a><div class="help">After logging in, Studio and Music Builder access will become available for an authorized account.</div></main></body></html>`;
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     try {
       if (url.pathname === "/" && request.method === "GET") {
         const user = await requireCreator(request);
-        if (!user) return new Response("Please log into app.saysaymusic.com with a Creator or Administrator account, then open Music Builder again.", { status: 403, headers: { "content-type": "text/plain; charset=utf-8" } });
+        if (!user) return new Response(ACCESS_PAGE, { status: 403, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
         return new Response(PAGE, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store", "x-frame-options": "DENY" } });
       }
       if (url.pathname.startsWith("/api/")) {
