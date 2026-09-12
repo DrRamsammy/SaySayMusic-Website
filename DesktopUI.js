@@ -21,33 +21,30 @@ const DESKTOP_JS = String.raw`
 (function(){
  function cleanTopNav(){
   var labels={btnLearningGames:'Learning Games',btnMusicBuilder:'Music Builder',btnGlobal:'Books'};
-  Object.keys(labels).forEach(function(id){var b=document.getElementById(id);if(b)b.textContent=labels[id];});
+  Object.keys(labels).forEach(function(id){
+   var b=document.getElementById(id);
+   if(b && b.textContent!==labels[id]) b.textContent=labels[id];
+  });
  }
  function cleanName(raw){
   raw=(raw||'').trim();
-  var names=['Anatomy & Physiology','Food & Nutrition','Life After College','Microbiology','Chemistry','Biology','Languages','Math','SAT'];
+  var names=['Anatomy & Physiology','Food & Nutrition','Life After College','College Readiness','Microbiology','Chemistry','Biology','Languages','Gospel','Math','SAT'];
   for(var i=0;i<names.length;i++){if(raw.indexOf(names[i])!==-1)return names[i];}
   return raw.replace(/^[^A-Za-z0-9]+\s*/,'').trim();
  }
  function fixSubjects(){
   document.querySelectorAll('.ssSubjectCard').forEach(function(card){
-   var label=card.querySelector('span:last-child');if(!label)return;
-   var name=cleanName(label.textContent);label.textContent=name;
-   var icon=card.querySelector('.ssSubjectIcon');if(!icon)return;
-   if(name==='SAT'){icon.textContent='SAT';icon.style.fontSize='24px';icon.style.fontWeight='900';}
-   else if(name==='Math'){icon.textContent='▦';}
-   else if(name==='Biology'){icon.textContent='⚕';}
-   else if(name==='Chemistry'){icon.textContent='⚗';}
-   else if(name==='Microbiology'){icon.textContent='☼';}
-   else if(name==='Anatomy & Physiology'){icon.textContent='♙';}
-   else if(name==='Food & Nutrition'){icon.textContent='●';}
-   else if(name==='Languages'){icon.textContent='◉';}
-   else if(name==='Life After College'){icon.textContent='▣';}
+   var label=card.querySelector('span:last-child');
+   if(!label)return;
+   var name=cleanName(label.textContent);
+   if(label.textContent!==name) label.textContent=name;
   });
  }
  function apply(){cleanTopNav();fixSubjects();}
- if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',apply);else apply();setTimeout(apply,400);setTimeout(apply,1200);
- new MutationObserver(apply).observe(document.documentElement,{childList:true,subtree:true});
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',apply);else apply();
+ setTimeout(apply,500);
+ setTimeout(apply,1500);
 })();
 `;
+
 export default {async fetch(request,env,ctx){const response=await app.fetch(request,env,ctx);const type=response.headers.get("content-type")||"";if(!type.includes("text/html"))return response;let html=await response.text();const tag=`<style id="ss-desktop-target">${DESKTOP_CSS}</style><script id="ss-desktop-target-js">${DESKTOP_JS}</script>`;html=html.includes("</head>")?html.replace("</head>",tag+"</head>"):tag+html;return new Response(html,{status:response.status,statusText:response.statusText,headers:response.headers});}};
