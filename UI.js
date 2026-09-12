@@ -4024,7 +4024,7 @@ function buildHtml() {
 "    }",
 "    var subjectOrder = [",
 "      \"Math\",\"SAT\",\"Biology\",\"Chemistry\",\"Microbiology\",\"Anatomy_Physiology\",",
-"      \"Gospel\",\"Entertainment\",\"BioMolecules\",\"Food_and_Nutrition\",\"Spanish\",\"French\",
+"      \"Gospel\",\"Entertainment\",\"BioMolecules\",\"Food_and_Nutrition\",\"Spanish\",\"French\",",
 "      \"Drugs\",\"Others\",",
 "    ];",
 "    Object.keys(bySub).sort().forEach(function(subjectName){",
