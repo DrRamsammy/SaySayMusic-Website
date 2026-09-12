@@ -341,7 +341,7 @@ function buildHtml() {
 "          <button class=\"btn\" id=\"btnAll\">📚 All</button>",
 "          <button class=\"btn\" id=\"btnMusic\">🎵 Music</button>",
 "          <button class=\"btn\" id=\"btnLearningGames\" onclick=\"window.open('https://saysayeducation.com','_blank','noopener')\">🎮 Learning Games</button>",
-"          <button class=\"btn\" id=\"btnGameBuilder\" onclick=\"window.open('https://saysayeducation.com/creator','_blank','noopener')\">🎮 Game Builder</button>",
+"          <button class=\"btn\" id=\"btnGameBuilder\" onclick=\"window.open('https://saysay-learning-games-preview.saysaydeducator.workers.dev/teacher/create-game','_blank','noopener')\">🎮 Teacher Game Creator</button>",
 "          <button class=\"btn\" id=\"btnMusicBuilder\" onclick=\"window.open('https://musicbuilder.saysaymusic.com','_blank','noopener')\">🎼 Music Builder</button>",
 "        <button class=\"btn\" id=\"btnGlobal\">📚 Books</button>",
 "          <button class=\"btn\" id=\"btnPortal\" onclick=\"window.open('https://portal.saysaymusic.com','_blank','noopener')\">🧑‍💼 Consultant Portal</button>",
