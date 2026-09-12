@@ -25,7 +25,7 @@ body.ss-redesign .grid>.card:last-child>.body{padding:20px 22px 30px}
 .ssAlbumGrid{grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}.ssAlbumGrid .albumCard{border-radius:16px!important}.ssAlbumGrid .albumCover{border-radius:14px!important}
 #ssForArtists{background:#0b0e12;border:1px solid rgba(255,191,0,.32);color:#fff;font-weight:800;cursor:pointer;white-space:nowrap}
 @media(max-width:1320px){body.ss-redesign .top{grid-template-columns:minmax(260px,1fr) auto auto auto;gap:12px}body.ss-redesign .top .title{font-size:22px}#ssProductNav .btn{padding:9px 13px;font-size:12px}.ssSubjectGrid{grid-template-columns:repeat(5,minmax(0,1fr))}.ssAlbumGrid{grid-template-columns:repeat(4,minmax(0,1fr))}}
-@media(max-width:980px){body.ss-redesign .wrap{padding:10px}.ssHeroCopy{padding:24px 20px}.ssHero h1{font-size:36px}.ssSubjectGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.ssAlbumGrid{grid-template-columns:repeat(2,minmax(0,1fr))}#ssForArtists{display:none}}
+@media(max-width:980px){body.ss-redesign .wrap{padding:10px}body.ss-redesign .top{width:100%;max-width:100%;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:'brand brand' 'products account' 'auth auth';gap:8px}#ssProductNav{width:auto;min-width:0;max-width:100%}#ssMobileMenuButton{width:100%;max-width:100%}#ssAccountWrap{min-width:0;max-width:100%}#ssAccountButton{width:auto;max-width:100%;white-space:nowrap}.ssHeroCopy{padding:24px 20px}.ssHero h1{font-size:36px}.ssSubjectGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.ssAlbumGrid{grid-template-columns:repeat(2,minmax(0,1fr))}#ssForArtists{display:none}}
 `;
 
 const POLISH_JS = String.raw`
