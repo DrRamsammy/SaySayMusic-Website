@@ -1,5 +1,5 @@
 import desktopApp from "./PolishedUI.js";
-import mobileApp from "./UI.js";
+import mobileApp from "./PolishedUI.js";
 
 const DESKTOP_CSS = String.raw`
 @media (min-width:981px){
@@ -26,7 +26,7 @@ const DESKTOP_JS = String.raw`
  }
  function cleanName(raw){
   raw=(raw||'').trim();
-  var names=['Anatomy & Physiology','Food & Nutrition','Life After College','College Readiness','Microbiology','Chemistry','Biology','Languages','Gospel','Math','SAT'];
+  var names=['Anatomy & Physiology','Food & Nutrition','Biomolecules','Entertainment','Microbiology','Chemistry','Biology','Languages','Gospel','Math','SAT'];
   for(var i=0;i<names.length;i++){if(raw.indexOf(names[i])!==-1)return names[i];}
   return raw.replace(/^[^A-Za-z0-9]+\s*/,'').trim();
  }
