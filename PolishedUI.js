@@ -55,13 +55,18 @@ const POLISH_JS = String.raw`
     var menu=byId('ssAccountMenu');
     var auth=byId('authRow');
     if(menu&&auth){
-      var buttons=auth.querySelectorAll('button');
+      var buttons=auth.querySelectorAll('button'),actions=[];
       for(var i=0;i<buttons.length;i++){
         var label=String(buttons[i].textContent||'').trim();
-        if(/^log in$/i.test(label)||/^sign up$/i.test(label)||/^logout$/i.test(label)||/^log out$/i.test(label)){
-          if(/^logout$/i.test(label))buttons[i].textContent='Log Out';
-          if(buttons[i].parentNode!==menu)menu.appendChild(buttons[i]);
-        }
+        if(/^log in$/i.test(label)||/^sign up$/i.test(label)||/^logout$/i.test(label)||/^log out$/i.test(label))actions.push(buttons[i]);
+      }
+      if(actions.length){
+        menu.querySelectorAll('.ssAuthAction').forEach(function(old){old.remove()});
+        actions.forEach(function(button){
+          if(/^logout$/i.test(String(button.textContent||'').trim()))button.textContent='Log Out';
+          button.classList.add('ssAuthAction');
+          menu.appendChild(button);
+        });
       }
     }
   }
