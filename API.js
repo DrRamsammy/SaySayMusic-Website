@@ -3763,7 +3763,7 @@ async function sendArtistApprovalEmail(env, details) {
   const text = lines.join("\n");
   try {
     await env.EMAIL.send({
-      from: "support@saysaymusic.com",
+      from: "portal@saysaymusic.com",
       to: details.email,
       replyTo: "support@saysaymusic.com",
       subject: "Your SaySayMusic Artist Access Is Approved",
