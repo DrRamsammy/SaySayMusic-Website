@@ -968,6 +968,15 @@ async function syncMetricsAccount(env, user) {
   } catch {}
 }
 
+async function syncAllMusicAccounts(env) {
+  if (!env.METRICS_INGEST_SECRET) return;
+  const result = await env.DB.prepare(
+    "SELECT id, handle, email, role, plan, created_at FROM users WHERE email IS NOT NULL AND email <> '' ORDER BY created_at ASC LIMIT 10000"
+  ).all();
+  const users = result && result.results ? result.results : [];
+  for (const account of users) await syncMetricsAccount(env, account);
+}
+
 async function apiAuthRegister(request, env) {
   let body;
   try {
@@ -1136,6 +1145,9 @@ async function apiAuthLogin(request, env) {
     });
   } catch {}
   await syncMetricsAccount(env, user);
+  if (String(user.role || "").toLowerCase() === "admin") {
+    await syncAllMusicAccounts(env);
+  }
 
   return withCors(request, new Response(resp.body, { status: 200, headers: h }));
 }
