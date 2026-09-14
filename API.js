@@ -1098,6 +1098,21 @@ async function apiAuthLogin(request, env) {
 
   const h = new Headers(resp.headers);
   h.append("Set-Cookie", setSessionCookie(token));
+
+  try {
+    await fetch("https://teachers.saysayeducation.com/api/business/event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event_type: "music_user_active",
+        product: "music",
+        visitor_id: user.id,
+        subject_id: "account_login",
+        source: "music_login"
+      })
+    });
+  } catch {}
+
   return withCors(request, new Response(resp.body, { status: 200, headers: h }));
 }
 
