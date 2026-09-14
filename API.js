@@ -3745,6 +3745,9 @@ async function sendArtistApprovalEmail(env, details) {
     return { ok: false, error: "EMAIL binding is missing" };
   }
   const loginUrl = "https://app.saysaymusic.com";
+  const escapeEmailHtml = (value) => String(value == null ? "" : value).replace(/[&<>"']/g, (ch) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  })[ch]);
   const lines = [
     "Hello " + (details.name || details.artistName || "Artist") + ",",
     "",
@@ -3768,7 +3771,7 @@ async function sendArtistApprovalEmail(env, details) {
       replyTo: "support@saysaymusic.com",
       subject: "Your SaySayMusic Artist Access Is Approved",
       text,
-      html: "<div style=\"font-family:Arial,sans-serif;max-width:640px\"><h1 style=\"color:#a87500\">SaySayMusic Artist Access</h1><p>Your artist application has been approved.</p><p><strong>Login:</strong> <a href=\"" + loginUrl + "\">" + loginUrl + "</a><br><strong>Username:</strong> " + escapeHtml(details.handle) + "</p>" + (details.tempPassword ? "<p><strong>Temporary password:</strong> " + escapeHtml(details.tempPassword) + "</p><p>Change this password after signing in.</p>" : "<p>Use the password you created when registering.</p>") + "<p>You may now select the annual Artist plan.</p><p>SaySayMusic LLC<br>Education Through Melody</p></div>"
+      html: "<div style=\"font-family:Arial,sans-serif;max-width:640px\"><h1 style=\"color:#a87500\">SaySayMusic Artist Access</h1><p>Your artist application has been approved.</p><p><strong>Login:</strong> <a href=\"" + loginUrl + "\">" + loginUrl + "</a><br><strong>Username:</strong> " + escapeEmailHtml(details.handle) + "</p>" + (details.tempPassword ? "<p><strong>Temporary password:</strong> " + escapeEmailHtml(details.tempPassword) + "</p><p>Change this password after signing in.</p>" : "<p>Use the password you created when registering.</p>") + "<p>You may now select the annual Artist plan.</p><p>SaySayMusic LLC<br>Education Through Melody</p></div>"
     });
     return { ok: true };
   } catch (error) {
