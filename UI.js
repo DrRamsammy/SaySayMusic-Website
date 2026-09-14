@@ -3356,7 +3356,7 @@ function buildHtml() {
 "            '<div class=\"studioKpi\"><div class=\"studioKpiLabel\">Subjects</div><div class=\"studioKpiValue\" id=\"studioKpiSubjects\">—</div></div>' +",
 "            '<div class=\"studioKpi\"><div class=\"studioKpiLabel\">Status</div><div class=\"studioKpiValue\" id=\"studioKpiStatus\">…</div></div>' +",
 "          '</div>' +",
-"          '<div class=\"studioActions\" style=\"margin-top:10px\"><button class=\"btn primary\" id=\"studioRefreshBtn\">Refresh Dashboard</button></div>' +",
+"          '<div class=\"studioActions\" style=\"margin-top:10px\"><button class=\"btn primary\" id=\"studioRefreshBtn\">Refresh Dashboard</button><a class=\"btn primary\" href=\"https://teachers.saysayeducation.com/admin/business\" target=\"_blank\" rel=\"noopener\">Business Metrics</a><a class=\"btn\" href=\"https://teachers.saysayeducation.com/admin/schools\" target=\"_blank\" rel=\"noopener\">School Licenses</a></div>' +",
 "          '<div class=\"studioResult\" id=\"studioDashResult\">No dashboard data loaded yet.</div>' +",
 "        '</div>' +",
 "        '<div class=\"sectionDivider\"></div>' +",
