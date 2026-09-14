@@ -5196,6 +5196,16 @@ function buildHtml() {
 "  <div class=\"ss-contact-row\"><span>Phone:</span> <a href=\"tel:+17863956025\">786-395-6025</a></div>",
 "  <div class=\"ss-contact-close\"><button class=\"btn\" onclick=\"toggleContactBox()\">Close</button></div>",
 "</div>",
+"<script>",
+"(function(){",
+"  var endpoint='https://teachers.saysayeducation.com/api/business/event';",
+"  var visitor=''; try{visitor=localStorage.getItem('ss_visitor_id')||crypto.randomUUID();localStorage.setItem('ss_visitor_id',visitor)}catch(e){visitor=String(Date.now())}",
+"  function metric(type,data){var body=JSON.stringify(Object.assign({event_type:type,product:'music',visitor_id:visitor,path:location.pathname},data||{}));try{navigator.sendBeacon(endpoint,new Blob([body],{type:'text/plain'}))}catch(e){fetch(endpoint,{method:'POST',headers:{'content-type':'application/json'},body:body,keepalive:true}).catch(function(){})}}",
+"  metric('page_view');",
+"  document.addEventListener('play',function(e){if(e.target&&e.target.tagName==='AUDIO')metric('music_play',{track:e.target.src||''})},true);",
+"  document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('button,a');if(!b)return;var t=String(b.textContent||'').toLowerCase();if(t.indexOf('upgrade')>=0||t.indexOf('checkout')>=0)metric('checkout_started',{source:'music-app'})});",
+"})();",
+"</script>",
 "</body>",
 "</html>"
   ].join("\n");
