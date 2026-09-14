@@ -946,6 +946,28 @@ async function apiLogout(request, env) {
   return withCors(request, new Response(resp.body, { status: 200, headers: h }));
 }
 
+async function syncMetricsAccount(env, user) {
+  if (!env.METRICS_INGEST_SECRET || !user || !user.id || !user.email) return;
+  try {
+    await fetch("https://teachers.saysayeducation.com/api/business/account-sync", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Metrics-Key": env.METRICS_INGEST_SECRET
+      },
+      body: JSON.stringify({
+        product: "music",
+        account_id: user.id,
+        name: user.handle || user.email,
+        email: user.email,
+        role: user.role || "customer",
+        plan: user.plan || "free",
+        status: "active"
+      })
+    });
+  } catch {}
+}
+
 async function apiAuthRegister(request, env) {
   let body;
   try {
@@ -1036,6 +1058,7 @@ async function apiAuthRegister(request, env) {
       })
     });
   } catch {}
+  await syncMetricsAccount(env, { id: userId, handle, email, role: "customer", plan: validPlan });
 
   return withCors(request, new Response(resp.body, { status: 200, headers: h }));
 }
@@ -1112,6 +1135,7 @@ async function apiAuthLogin(request, env) {
       })
     });
   } catch {}
+  await syncMetricsAccount(env, user);
 
   return withCors(request, new Response(resp.body, { status: 200, headers: h }));
 }
