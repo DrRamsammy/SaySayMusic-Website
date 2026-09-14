@@ -347,6 +347,9 @@ async function ensureSchema(env) {
   await addColumnIfMissing(env, "users", "plan", "plan TEXT DEFAULT 'free'");
   await addColumnIfMissing(env, "users", "daily_seconds_used", "daily_seconds_used INTEGER NOT NULL DEFAULT 0");
   await addColumnIfMissing(env, "users", "last_listen_date", "last_listen_date TEXT");
+  await addColumnIfMissing(env, "users", "stripe_customer_id", "stripe_customer_id TEXT");
+  await addColumnIfMissing(env, "users", "stripe_subscription_id", "stripe_subscription_id TEXT");
+  await addColumnIfMissing(env, "users", "subscription_status", "subscription_status TEXT");
 
   await addColumnIfMissing(env, "tracks", "subject", "subject TEXT");
   await addColumnIfMissing(env, "tracks", "grade_level", "grade_level TEXT");
@@ -3211,11 +3214,14 @@ async function apiBillingPremiumCheckout(request, env) {
     if (!user) return withCors(request, bad("Login required", 401));
 
     const STRIPE_SECRET = env.STRIPE_SECRET_KEY;
+    if (!STRIPE_SECRET) return withCors(request, bad("Billing is not configured", 503));
 
     const params = new URLSearchParams();
     params.append("mode", "subscription");
   params.append("line_items[0][price]", "price_1TDCUVBhXVrt7Js9P3HnOFt4");
     params.append("line_items[0][quantity]", "1");
+    params.append("client_reference_id", String(user.id));
+    if (user.email) params.append("customer_email", String(user.email));
     params.append("success_url", "https://app.saysaymusic.com/?checkout=success&session_id={CHECKOUT_SESSION_ID}");
     params.append("cancel_url", "https://app.saysaymusic.com/?checkout=cancel");
 
@@ -3265,11 +3271,14 @@ async function apiBillingArtistCheckout(request, env) {
     if (!user) return withCors(request, bad("Login required", 401));
 
     const STRIPE_SECRET = env.STRIPE_SECRET_KEY;
+    if (!STRIPE_SECRET) return withCors(request, bad("Billing is not configured", 503));
 
     const params = new URLSearchParams();
     params.append("mode", "subscription");
     params.append("line_items[0][price]", "price_1TDCUWBhXVrt7Js907VnLUed");
     params.append("line_items[0][quantity]", "1");
+    params.append("client_reference_id", String(user.id));
+    if (user.email) params.append("customer_email", String(user.email));
     params.append("success_url", "https://app.saysaymusic.com/?checkout=success&session_id={CHECKOUT_SESSION_ID}");
     params.append("cancel_url", "https://app.saysaymusic.com/?checkout=cancel");
 
@@ -3458,6 +3467,136 @@ async function apiBillingPortal(request, env) {
     }));
   } catch (e) {
     return withCors(request, json({ ok: false, error: String(e && e.message ? e.message : e) }, 500));
+  }
+}
+
+function bytesToHex(bytes) {
+  return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function secureHexEqual(a, b) {
+  const left = String(a || "").toLowerCase();
+  const right = String(b || "").toLowerCase();
+  if (left.length !== right.length) return false;
+  let diff = 0;
+  for (let i = 0; i < left.length; i++) diff |= left.charCodeAt(i) ^ right.charCodeAt(i);
+  return diff === 0;
+}
+
+async function verifyStripeWebhook(rawBody, signatureHeader, secret) {
+  const parts = String(signatureHeader || "").split(",");
+  let timestamp = "";
+  const signatures = [];
+  for (const part of parts) {
+    const pair = part.trim().split("=");
+    if (pair[0] === "t") timestamp = pair.slice(1).join("=");
+    if (pair[0] === "v1") signatures.push(pair.slice(1).join("="));
+  }
+  const seconds = Number(timestamp);
+  if (!seconds || Math.abs(Math.floor(Date.now() / 1000) - seconds) > 300) return false;
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(String(secret)),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const digest = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(timestamp + "." + rawBody)
+  );
+  const expected = bytesToHex(new Uint8Array(digest));
+  return signatures.some((value) => secureHexEqual(value, expected));
+}
+
+async function stripeGet(env, path) {
+  const response = await fetch("https://api.stripe.com/v1/" + path, {
+    headers: { "Authorization": "Bearer " + env.STRIPE_SECRET_KEY }
+  });
+  const data = await response.json();
+  return { response, data };
+}
+
+async function apiBillingStripeWebhook(request, env) {
+  try {
+    if (!env.STRIPE_WEBHOOK_SECRET || !env.STRIPE_SECRET_KEY) {
+      return bad("Billing webhook is not configured", 503);
+    }
+    const rawBody = await request.text();
+    const valid = await verifyStripeWebhook(
+      rawBody,
+      request.headers.get("Stripe-Signature"),
+      env.STRIPE_WEBHOOK_SECRET
+    );
+    if (!valid) return bad("Invalid Stripe signature", 400);
+
+    const event = JSON.parse(rawBody);
+    const object = event && event.data && event.data.object ? event.data.object : {};
+    const eventId = String(event.id || "");
+    if (!eventId) return bad("Invalid Stripe event", 400);
+
+    await env.DB.prepare(
+      "CREATE TABLE IF NOT EXISTS stripe_events (id TEXT PRIMARY KEY, event_type TEXT, processed_at TEXT DEFAULT (datetime('now')))"
+    ).run();
+    const seen = await env.DB.prepare("SELECT id FROM stripe_events WHERE id = ?").bind(eventId).first();
+    if (seen) return json({ received: true, duplicate: true });
+
+    if (event.type === "checkout.session.completed" && object.payment_status === "paid") {
+      const userId = String(object.client_reference_id || "");
+      const customerId = String(object.customer || "");
+      const subscriptionId = String(object.subscription || "");
+      let plan = "free";
+      let role = null;
+      const sessionId = String(object.id || "");
+      if (sessionId) {
+        const result = await stripeGet(env, "checkout/sessions/" + encodeURIComponent(sessionId) + "/line_items");
+        const items = result.data && result.data.data ? result.data.data : [];
+        for (const item of items) {
+          const priceId = String(item && item.price && item.price.id || "");
+          if (priceId === "price_1TDCUVBhXVrt7Js9P3HnOFt4") plan = "premium";
+          if (priceId === "price_1TDCUWBhXVrt7Js907VnLUed") { plan = "artist"; role = "artist"; }
+        }
+      }
+      if (userId && plan !== "free") {
+        if (role) {
+          await env.DB.prepare(
+            "UPDATE users SET plan = ?, role = ?, stripe_customer_id = ?, stripe_subscription_id = ?, subscription_status = 'active' WHERE id = ?"
+          ).bind(plan, role, customerId, subscriptionId, userId).run();
+        } else {
+          await env.DB.prepare(
+            "UPDATE users SET plan = ?, stripe_customer_id = ?, stripe_subscription_id = ?, subscription_status = 'active' WHERE id = ?"
+          ).bind(plan, customerId, subscriptionId, userId).run();
+        }
+      }
+    }
+
+    if (event.type === "customer.subscription.updated") {
+      const customerId = String(object.customer || "");
+      const status = String(object.status || "");
+      await env.DB.prepare(
+        "UPDATE users SET subscription_status = ? WHERE stripe_customer_id = ?"
+      ).bind(status, customerId).run();
+      if (!["active", "trialing"].includes(status)) {
+        await env.DB.prepare(
+          "UPDATE users SET plan = 'free', role = CASE WHEN role = 'artist' THEN 'customer' ELSE role END WHERE stripe_customer_id = ?"
+        ).bind(customerId).run();
+      }
+    }
+
+    if (event.type === "customer.subscription.deleted") {
+      const customerId = String(object.customer || "");
+      await env.DB.prepare(
+        "UPDATE users SET plan = 'free', role = CASE WHEN role = 'artist' THEN 'customer' ELSE role END, subscription_status = 'canceled' WHERE stripe_customer_id = ?"
+      ).bind(customerId).run();
+    }
+
+    await env.DB.prepare(
+      "INSERT INTO stripe_events (id, event_type) VALUES (?, ?)"
+    ).bind(eventId, String(event.type || "")).run();
+    return json({ received: true });
+  } catch (e) {
+    return json({ ok: false, error: String(e && e.message ? e.message : e) }, 500);
   }
 }
 
@@ -4656,6 +4795,7 @@ if (path === "/api/me/daily-usage" && request.method === "POST") {
       if (path === "/api/billing/checkout-artist" && request.method === "POST") return apiBillingArtistCheckout(request, env);
       if (path === "/api/billing/confirm-checkout") return apiBillingConfirmCheckout(request, env);
       if (path === "/api/billing/portal") return apiBillingPortal(request, env);
+      if (path === "/api/billing/stripe/webhook" && request.method === "POST") return apiBillingStripeWebhook(request, env);
       if (path === "/api/artist/apply" && request.method === "POST") return apiArtistApply(request, env);
       if (path === "/api/admin/upload-track" && request.method === "POST") return apiAdminUploadTrack(request, env);
       if (path === "/api/admin/upload-cover" && request.method === "POST") return apiAdminUploadCover(request, env);
