@@ -3740,6 +3740,42 @@ async function apiAdminArtistApplications(request, env) {
   }
 }
 
+async function sendArtistApprovalEmail(env, details) {
+  if (!env.EMAIL || typeof env.EMAIL.send !== "function") {
+    return { ok: false, error: "EMAIL binding is missing" };
+  }
+  const loginUrl = "https://app.saysaymusic.com";
+  const lines = [
+    "Hello " + (details.name || details.artistName || "Artist") + ",",
+    "",
+    "Your SaySayMusic artist application has been approved.",
+    "",
+    "Login: " + loginUrl,
+    "Username: " + details.handle
+  ];
+  if (details.tempPassword) {
+    lines.push("Temporary password: " + details.tempPassword);
+    lines.push("", "Change this temporary password after signing in.");
+  } else {
+    lines.push("", "Use the password you created when registering.");
+  }
+  lines.push("", "You may now open Artist access and select the annual Artist plan.", "", "SaySayMusic LLC", "Education Through Melody");
+  const text = lines.join("\n");
+  try {
+    await env.EMAIL.send({
+      from: "support@saysaymusic.com",
+      to: details.email,
+      replyTo: "support@saysaymusic.com",
+      subject: "Your SaySayMusic Artist Access Is Approved",
+      text,
+      html: "<div style=\"font-family:Arial,sans-serif;max-width:640px\"><h1 style=\"color:#a87500\">SaySayMusic Artist Access</h1><p>Your artist application has been approved.</p><p><strong>Login:</strong> <a href=\"" + loginUrl + "\">" + loginUrl + "</a><br><strong>Username:</strong> " + escapeHtml(details.handle) + "</p>" + (details.tempPassword ? "<p><strong>Temporary password:</strong> " + escapeHtml(details.tempPassword) + "</p><p>Change this password after signing in.</p>" : "<p>Use the password you created when registering.</p>") + "<p>You may now select the annual Artist plan.</p><p>SaySayMusic LLC<br>Education Through Melody</p></div>"
+    });
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: String(error && error.message ? error.message : error) };
+  }
+}
+
 async function apiAdminArtistApplicationDecision(request, env) {
   try {
     const isAdmin = await requireAdmin(request, env);
@@ -3768,6 +3804,7 @@ async function apiAdminArtistApplicationDecision(request, env) {
     let creatorAction = null;
     let tempPassword = null;
     let smsResult = null;
+    let emailResult = null;
 
     if (action === "approve") {
       const email = String(existing.email || "").trim().toLowerCase();
@@ -3800,14 +3837,7 @@ async function apiAdminArtistApplicationDecision(request, env) {
           "SELECT id, handle, email, role, plan FROM users WHERE id = ?"
         ).bind(existingByEmail.id).first();
 
-        tempPassword = "SaySay" + randomToken().slice(0, 8);
-const tempPasswordHash = await hashPassword(tempPassword);
-
-await env.DB.prepare(
-  "UPDATE users SET role = 'creator', plan = COALESCE(plan, 'free'), password_hash = ? WHERE id = ?"
-).bind(tempPasswordHash, existingByEmail.id).run();
-
-creatorAction = "upgraded_existing_user";
+        creatorAction = "upgraded_existing_user";
 if (existing.phone && tempPassword && creatorUser && creatorUser.handle) {
   smsResult = await sendTwilioSms(
     env,
@@ -3882,6 +3912,16 @@ if (existing.phone && tempPassword && creatorUser && creatorUser.handle) {
   );
 }
       }
+
+      if (creatorUser && creatorUser.handle) {
+        emailResult = await sendArtistApprovalEmail(env, {
+          name: fallbackName,
+          artistName,
+          email,
+          handle: creatorUser.handle,
+          tempPassword
+        });
+      }
     }
 
     await env.DB.prepare(
@@ -3912,7 +3952,8 @@ if (existing.phone && tempPassword && creatorUser && creatorUser.handle) {
         role: creatorUser.role || "creator",
         plan: creatorUser.plan || "free",
         temp_password: tempPassword || null,
-        sms_result: smsResult || null
+        sms_result: smsResult || null,
+        email_result: emailResult || null
       } : null
     }, 200));
   } catch (e) {
