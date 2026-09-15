@@ -1,5 +1,6 @@
 import desktopApp from "./PolishedUI.js";
 import mobileApp from "./PolishedUI.js";
+import lyricsBook from "./LyricsBook.js";
 
 const DESKTOP_CSS = String.raw`
 @media (min-width:981px){
@@ -36,18 +37,36 @@ const DESKTOP_JS = String.raw`
 })();
 `;
 
+const STUDIO_BOOK_JS = String.raw`
+(function(){
+ function addBookLink(){
+  var list=document.getElementById('list');
+  if(!list)return;
+  var card=list.querySelector('.studioCard');
+  if(!card||document.getElementById('ssLyricsBookLink'))return;
+  var link=document.createElement('a');link.id='ssLyricsBookLink';link.href='/studio/lyrics-book';
+  link.textContent='Lyrics Book Maker';link.className='btn primary';
+  link.style.cssText='display:inline-block;margin:10px 0;padding:12px 18px';
+  var title=card.querySelector('.studioSectionTitle');
+  if(title)title.insertAdjacentElement('afterend',link);else card.prepend(link);
+ }
+ function boot(){var list=document.getElementById('list');if(!list)return;new MutationObserver(addBookLink).observe(list,{childList:true,subtree:true});addBookLink()}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+})();`;
+
 function isMobileRequest(request){
  const ua=request.headers.get('user-agent')||'';
  return /Android|iPhone|iPod|Mobile|BlackBerry|IEMobile|Opera Mini/i.test(ua);
 }
 
 export default {async fetch(request,env,ctx){
- if(isMobileRequest(request)) return mobileApp.fetch(request,env,ctx);
- const response=await desktopApp.fetch(request,env,ctx);
+ if(new URL(request.url).pathname==='/studio/lyrics-book')return lyricsBook.fetch(request);
+ const mobile=isMobileRequest(request);
+ const response=await (mobile?mobileApp:desktopApp).fetch(request,env,ctx);
  const type=response.headers.get("content-type")||"";
  if(!type.includes("text/html"))return response;
  let html=await response.text();
- const tag=`<style id="ss-desktop-target">${DESKTOP_CSS}</style><script id="ss-desktop-target-js">${DESKTOP_JS}</script>`;
+ const tag=(mobile?'':`<style id="ss-desktop-target">${DESKTOP_CSS}</style><script id="ss-desktop-target-js">${DESKTOP_JS}</script>`)+`<script id="ss-lyrics-studio-link">${STUDIO_BOOK_JS}</script>`;
  html=html.includes("</head>")?html.replace("</head>",tag+"</head>"):tag+html;
  return new Response(html,{status:response.status,statusText:response.statusText,headers:response.headers});
 }};
