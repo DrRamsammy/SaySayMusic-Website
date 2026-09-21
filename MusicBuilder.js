@@ -35,6 +35,42 @@ function extractJson(text) {
   return JSON.parse(text.slice(start, end + 1));
 }
 
+function makeLyricsPronounceable(value) {
+  const subscriptDigits = { "₀": "0", "₁": "1", "₂": "2", "₃": "3", "₄": "4", "₅": "5", "₆": "6", "₇": "7", "₈": "8", "₉": "9" };
+  const numberWords = { "0": "zero", "1": "one", "2": "two", "3": "three", "4": "four", "5": "five", "6": "six", "7": "seven", "8": "eight", "9": "nine", "10": "ten", "11": "eleven", "12": "twelve" };
+  const sayNumber = number => String(number).split("").map(digit => numberWords[digit] || digit).join(" ");
+  let lyrics = String(value || "");
+
+  lyrics = lyrics.replace(/[₀-₉]/g, digit => subscriptDigits[digit]);
+  lyrics = lyrics
+    .replace(/C6H12O6\b/g, "C six H twelve O six")
+    .replace(/\b([Cc])([1-9]|1[0-2])\b/g, (_, letter, number) => (letter === "c" ? "carbon " : "Carbon ") + (numberWords[number] || sayNumber(number)))
+    .replace(/\bOH\b/g, "O H")
+    .replace(/α/gi, "alpha")
+    .replace(/β/gi, "beta")
+    .replace(/γ/gi, "gamma")
+    .replace(/δ/gi, "delta")
+    .replace(/σ/gi, "sigma")
+    .replace(/≠/g, " is not the same as ")
+    .replace(/≤/g, " is less than or equal to ")
+    .replace(/≥/g, " is greater than or equal to ")
+    .replace(/±/g, " plus or minus ")
+    .replace(/→/g, " produces ")
+    .replace(/←/g, " comes from ")
+    .replace(/↔|⇌/g, " reversibly forms ")
+    .replace(/~\s*(\d+(?:\.\d+)?)\s*%/g, "approximately $1 percent")
+    .replace(/(\d+(?:\.\d+)?)\s*%/g, "$1 percent")
+    .replace(/(\d+(?:\.\d+)?)\s*°\s*C\b/gi, "$1 degrees Celsius")
+    .replace(/\b([DL])[‐‑‒–—-]/g, "$1 ")
+    .replace(/\b(alpha|beta|gamma|delta)[‐‑‒–—-](\d+)\s*,\s*(\d+)/gi, (_, greek, first, second) => greek + " " + sayNumber(first) + " " + sayNumber(second))
+    .replace(/\bphosphate\b/gi, match => match[0] === "P" ? "Fosfate" : "fosfate")
+    .replace(/[‐‑‒–—]/g, "-")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\s+([,.;:!?])/g, "$1");
+
+  return lyrics;
+}
+
 async function runText(env, prompt, maxTokens, temperature) {
   if (!env.AI) throw new Error("Workers AI binding AI is not configured.");
   let lastError;
@@ -212,6 +248,7 @@ async function makeSong(request, env) {
     "For science, teach structure, function, mechanisms, regulation and clinical importance when relevant. For mathematics, define variables and show every requested solution step with correct arithmetic. For other subjects, use the appropriate evidence, sequence, vocabulary and applications.",
     "Do not take over material assigned to other songs.",
     "Put clear phonetic respellings inside the lyrics for difficult scientific terms. Never put phonetics in the title.",
+    "Write every scientific symbol in words inside lyrics so an AI singer pronounces it. Use alpha, beta, gamma, delta and sigma instead of Greek symbols; carbon one instead of C1; O H instead of OH; percent instead of %; degrees Celsius instead of °C; and words such as produces, reversibly forms, or is not the same as instead of arrows or equation symbols. Spell chemical formulas for singing, for example C six H twelve O six. Use fosfate instead of phosphate in lyrics only. Keep approved titles unchanged.",
     "The detailed musical direction must clearly remain inside the ALBUM SOUND FAMILY, while giving this song a distinct beat, BPM, key, instruments, vocal treatment, musical storytelling moments, mix and mastering direction. English vocals. Avoid making songs in the same album sound alike.",
     "Use [Intro], [Chorus], [Verse 1], [Chorus], [Verse 2], [Chorus], more verses when scientifically necessary, [Final Chorus], [SaySayMusic Tag].",
     "The final tag includes SaySayMusic and Education Through Melody.",
@@ -235,6 +272,7 @@ async function makeSong(request, env) {
     "Correct every factual, mathematical, scientific, historical, linguistic, medical and clinical claim. Remove or cautiously rewrite anything uncertain, misleading, overstated, outdated or not directly relevant to the assigned topic.",
     "Check mechanisms, directions, units, numbers, gene and protein names, drug actions, diseases, chronology and terminology. Never invent a source or imply a drug has one specific molecular target when its accepted mechanism is broader.",
     "Check every difficult pronunciation. Use a clear phonetic respelling in parentheses inside lyrics only when needed. Greek delta must be pronounced DEL-tuh, never pol-dee. Never alter the approved song title.",
+    "Replace every scientific symbol in the lyrics with singable words: alpha, beta, gamma, delta and sigma; carbon one instead of C1; O H instead of OH; percent instead of %; degrees Celsius instead of °C; and produces, reversibly forms, or is not the same as instead of arrows or equation symbols. Spell chemical formulas aloud, such as C six H twelve O six. Write fosfate instead of phosphate in lyrics only. Do not leave notation that an AI singer may skip.",
     "Make the lyrics genuinely singable in the assigned genre. Replace textbook paragraphs with short performance-ready lines, normally 4 to 14 words per line. Use natural rhythm, rhyme, repetition, breathing space and memorable teaching hooks without sacrificing accuracy.",
     "Keep the genre direction detailed but production-ready. Use a streaming-friendly mastering target near -14 LUFS with controlled low end and clear educational vocals, unless the creator explicitly requests another target.",
     "Do not use emoji, numbered-list symbols, markdown bullets, citations, footnotes, stage explanations or prose commentary inside the lyrics.",
@@ -260,13 +298,14 @@ async function createMusic(request, env) {
   const genre = String(body.genre || "").trim().slice(0, 3000);
   const lyrics = String(body.lyrics || "").trim().slice(0, 12000);
   if (!title || !genre || !lyrics) return json({ error: "Song name, genre, and lyrics are required." }, 400);
+  const lyricsForMusic = makeLyricsPronounceable(lyrics);
   const response = await fetch("https://api.musicgpt.com/api/public/v2/MusicAI", {
     method: "POST",
     headers: { Authorization: env.MUSICGPT_API_KEY, "Content-Type": "application/json" },
     body: JSON.stringify({
       prompt: "Create a polished educational song with clear English vocals. Follow the supplied lyrics exactly and prioritize intelligible pronunciation.",
       music_style: genre,
-      lyrics,
+      lyrics: lyricsForMusic,
       title,
       make_instrumental: false,
       vocal_only: false,
