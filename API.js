@@ -1782,7 +1782,8 @@ async function apiStream(request, env, trackId) {
 
   const key = row.audio_key;
   const range = request.headers.get("Range");
-  if (user && !hasUnlimitedAccess(user) && Number(user.daily_seconds_used || 0) >= 3600) {
+  const isFreeFeaturedSong = String(trackId) === "6c5e1a0028f87a98016464d428f34b75e37c93f9";
+  if (!isFreeFeaturedSong && user && !hasUnlimitedAccess(user) && Number(user.daily_seconds_used || 0) >= 3600) {
     return withCors(request, bad("Daily limit reached", 403));
   }
   const obj = await env.AUDIO_USER.get(key, { range: range ? parseRangeHeader(range) : undefined });
