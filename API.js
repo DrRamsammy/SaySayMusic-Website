@@ -1782,7 +1782,8 @@ async function apiStream(request, env, trackId) {
 
   const key = row.audio_key;
   const range = request.headers.get("Range");
-  const isFreeFeaturedSong = String(trackId) === "6c5e1a0028f87a98016464d428f34b75e37c93f9";
+  const featured = await getFeaturedSongConfig(env);
+  const isFreeFeaturedSong = String(trackId) === String(featured.track_id || "");
   if (!isFreeFeaturedSong && user && !hasUnlimitedAccess(user) && Number(user.daily_seconds_used || 0) >= 3600) {
     return withCors(request, bad("Daily limit reached", 403));
   }
@@ -1801,6 +1802,93 @@ const headers = new Headers();
     headers.set("Content-Length", String(obj.size));
     return withCors(request, new Response(obj.body, { status: 200, headers: headers }));
   }
+}
+
+const FEATURED_SONG_CONFIG_KEY = "system/free-song/config.json";
+const DEFAULT_FEATURED_SONG = {
+  track_id: "6c5e1a0028f87a98016464d428f34b75e37c93f9",
+  title: "What If Hope Went Viral!",
+  artist: "SaySayCreator",
+  subject: "Entertainment",
+  cover_key: null
+};
+
+async function getFeaturedSongConfig(env) {
+  try {
+    const obj = await env.AUDIO_USER.get(FEATURED_SONG_CONFIG_KEY);
+    if (!obj) return { ...DEFAULT_FEATURED_SONG };
+    const parsed = JSON.parse(await obj.text());
+    if (!parsed || !parsed.track_id) return { ...DEFAULT_FEATURED_SONG };
+    return { ...DEFAULT_FEATURED_SONG, ...parsed };
+  } catch {
+    return { ...DEFAULT_FEATURED_SONG };
+  }
+}
+
+async function apiFeaturedSong(request, env) {
+  const featured = await getFeaturedSongConfig(env);
+  return withCors(request, json({
+    ok: true,
+    featured: {
+      track_id: featured.track_id,
+      title: featured.title,
+      artist: featured.artist,
+      subject: featured.subject,
+      cover_url: featured.cover_key ? "https://stream.saysaymusic.com/api/featured-song/cover" : "https://app.saysaymusic.com/free-song-cover.jpg",
+      updated_at: featured.updated_at || null
+    }
+  }));
+}
+
+async function apiFeaturedSongCover(request, env) {
+  const featured = await getFeaturedSongConfig(env);
+  if (!featured.cover_key) return withCors(request, bad("Featured cover not uploaded", 404));
+  const obj = await env.AUDIO_USER.get(featured.cover_key);
+  if (!obj) return withCors(request, bad("Featured cover missing", 404));
+  const headers = new Headers();
+  headers.set("Content-Type", (obj.httpMetadata && obj.httpMetadata.contentType) || "image/jpeg");
+  headers.set("Cache-Control", "public, max-age=300");
+  return withCors(request, new Response(obj.body, { status: 200, headers }));
+}
+
+async function apiAdminFeaturedSong(request, env) {
+  const isAdmin = await requireAdmin(request, env);
+  if (!isAdmin) return withCors(request, bad("Admin only", 403));
+  if (request.method !== "POST") return withCors(request, bad("POST required", 405));
+
+  const body = await request.json().catch(() => ({}));
+  const trackId = String(body.track_id || "").trim();
+  const coverDataUrl = String(body.cover_data_url || "").trim();
+  if (!trackId) return withCors(request, bad("Select a song", 400));
+  if (!coverDataUrl) return withCors(request, bad("Add a cover image", 400));
+
+  const track = await env.DB.prepare(
+    "SELECT id, title, artist, subject FROM tracks WHERE id = ?"
+  ).bind(trackId).first();
+  if (!track) return withCors(request, bad("Track not found", 404));
+
+  const match = coverDataUrl.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/);
+  if (!match) return withCors(request, bad("Cover must be a JPG, PNG, or WebP image", 400));
+  const binary = atob(match[2]);
+  if (binary.length > 5 * 1024 * 1024) return withCors(request, bad("Cover must be 5 MB or smaller", 413));
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  const ext = match[1] === "image/png" ? "png" : (match[1] === "image/webp" ? "webp" : "jpg");
+  const coverKey = "system/free-song/cover." + ext;
+  await env.AUDIO_USER.put(coverKey, bytes, { httpMetadata: { contentType: match[1] } });
+
+  const featured = {
+    track_id: String(track.id),
+    title: String(track.title || "Featured Song"),
+    artist: String(track.artist || "SaySayMusic"),
+    subject: String(track.subject || ""),
+    cover_key: coverKey,
+    updated_at: new Date().toISOString()
+  };
+  await env.AUDIO_USER.put(FEATURED_SONG_CONFIG_KEY, JSON.stringify(featured), {
+    httpMetadata: { contentType: "application/json" }
+  });
+  return withCors(request, json({ ok: true, featured }));
 }
 
 async function apiHomeAlbums(request, env) {
@@ -4869,6 +4957,9 @@ if (path === "/api/me/daily-usage" && request.method === "POST") {
 
       if (path === "/api/tracks") return apiTracks(request, env);
       if (path === "/api/trending") return apiTrending(request, env);
+      if (path === "/api/featured-song") return apiFeaturedSong(request, env);
+      if (path === "/api/featured-song/cover") return apiFeaturedSongCover(request, env);
+      if (path === "/api/admin/featured-song" && request.method === "POST") return apiAdminFeaturedSong(request, env);
 
       if (path === "/api/library/prefixes") return apiLibraryPrefixes(request, env);
       if (path === "/api/library/by-prefix") return apiLibraryByPrefix(request, env);

@@ -79,18 +79,29 @@ const DESKTOP_JS = String.raw`
 
 const STUDIO_BOOK_JS = String.raw`
 (function(){
- function addBookLink(){
+ var adminAllowed=false,adminChecked=false;
+ function addStudioLinks(){
   var list=document.getElementById('list');
   if(!list)return;
   var card=list.querySelector('.studioCard');
-  if(!card||document.getElementById('ssLyricsBookLink'))return;
-  var link=document.createElement('a');link.id='ssLyricsBookLink';link.href='/studio/lyrics-book';
-  link.textContent='Lyrics Book Maker';link.className='btn primary';
-  link.style.cssText='display:inline-block;margin:10px 0;padding:12px 18px';
+  if(!card)return;
   var title=card.querySelector('.studioSectionTitle');
-  if(title)title.insertAdjacentElement('afterend',link);else card.prepend(link);
+  if(!document.getElementById('ssLyricsBookLink')){
+   var book=document.createElement('a');book.id='ssLyricsBookLink';book.href='/studio/lyrics-book';
+   book.textContent='Lyrics Book Maker';book.className='btn primary';
+   book.style.cssText='display:inline-block;margin:10px 8px 10px 0;padding:12px 18px';
+   if(title)title.insertAdjacentElement('afterend',book);else card.prepend(book);
+  }
+  if(adminAllowed&&!document.getElementById('ssFreeSongLink')){
+   var weekly=document.createElement('a');weekly.id='ssFreeSongLink';weekly.href='/studio/free-song';
+   weekly.textContent='Free Song of the Week';weekly.className='btn primary';
+   weekly.style.cssText='display:inline-block;margin:10px 0;padding:12px 18px';
+   var bookLink=document.getElementById('ssLyricsBookLink');
+   if(bookLink)bookLink.insertAdjacentElement('afterend',weekly);else card.prepend(weekly);
+  }
  }
- function boot(){var list=document.getElementById('list');if(!list)return;new MutationObserver(addBookLink).observe(list,{childList:true,subtree:true});addBookLink()}
+ function checkAdmin(){if(adminChecked)return;adminChecked=true;fetch('https://stream.saysaymusic.com/api/me',{credentials:'include'}).then(function(r){return r.json()}).then(function(out){adminAllowed=!!(out&&out.user&&String(out.user.role||'').toLowerCase()==='admin');addStudioLinks()}).catch(function(){})}
+ function boot(){var list=document.getElementById('list');if(!list)return;new MutationObserver(addStudioLinks).observe(list,{childList:true,subtree:true});addStudioLinks();checkAdmin()}
  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
 })();`;
 
@@ -102,7 +113,7 @@ function isMobileRequest(request){
 export default {async fetch(request,env,ctx){
  const pathname=new URL(request.url).pathname;
  if(pathname==='/studio/lyrics-book')return lyricsBook.fetch(request);
- if(pathname==='/free-song'||pathname==='/free-song/'||pathname==='/free-song-cover.jpg')return freeSong.fetch(request);
+ if(pathname==='/free-song'||pathname==='/free-song/'||pathname==='/free-song-cover.jpg'||pathname==='/studio/free-song')return freeSong.fetch(request);
  const mobile=isMobileRequest(request);
  const response=await (mobile?mobileApp:desktopApp).fetch(request,env,ctx);
  const type=response.headers.get("content-type")||"";
