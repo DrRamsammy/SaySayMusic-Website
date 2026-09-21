@@ -1,6 +1,7 @@
 import desktopApp from "./PolishedUI.js";
 import mobileApp from "./PolishedUI.js";
 import lyricsBook from "./LyricsBook.js";
+import freeSong from "./FreeSong.js";
 
 const DESKTOP_CSS = String.raw`
 @media (min-width:981px){
@@ -99,7 +100,9 @@ function isMobileRequest(request){
 }
 
 export default {async fetch(request,env,ctx){
- if(new URL(request.url).pathname==='/studio/lyrics-book')return lyricsBook.fetch(request);
+ const pathname=new URL(request.url).pathname;
+ if(pathname==='/studio/lyrics-book')return lyricsBook.fetch(request);
+ if(pathname==='/free-song'||pathname==='/free-song/'||pathname==='/free-song-cover.jpg')return freeSong.fetch(request);
  const mobile=isMobileRequest(request);
  const response=await (mobile?mobileApp:desktopApp).fetch(request,env,ctx);
  const type=response.headers.get("content-type")||"";
