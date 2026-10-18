@@ -81,6 +81,12 @@ const STUDIO_BOOK_JS = String.raw`
 (function(){
  var adminAllowed=false,adminChecked=false;
  function addStudioLinks(){
+  var nav=document.getElementById('ssProductNav');
+  if(nav&&!document.getElementById('ssTextbooksLink')){
+   var student=document.createElement('a');student.id='ssTextbooksLink';student.className='btn';
+   student.href='https://saysay-textbook-access.saysaydeducator.workers.dev/';
+   student.textContent='Textbooks';student.target='_blank';student.rel='noopener noreferrer';nav.appendChild(student);
+  }
   var list=document.getElementById('list');
   if(!list)return;
   var card=list.querySelector('.studioCard');
@@ -98,6 +104,14 @@ const STUDIO_BOOK_JS = String.raw`
    weekly.style.cssText='display:inline-block;margin:10px 0;padding:12px 18px';
    var bookLink=document.getElementById('ssLyricsBookLink');
    if(bookLink)bookLink.insertAdjacentElement('afterend',weekly);else card.prepend(weekly);
+  }
+  if(adminAllowed&&!document.getElementById('ssTextbookAdminLink')){
+   var textbook=document.createElement('a');textbook.id='ssTextbookAdminLink';
+   textbook.href='https://saysay-textbook-access.saysaydeducator.workers.dev/?publisher=1';
+   textbook.textContent='Textbook Admin';textbook.className='btn primary';textbook.target='_blank';textbook.rel='noopener noreferrer';
+   textbook.style.cssText='display:inline-block;margin:10px 8px 10px 0;padding:12px 18px';
+   var lastLink=document.getElementById('ssFreeSongLink')||document.getElementById('ssLyricsBookLink');
+   if(lastLink)lastLink.insertAdjacentElement('afterend',textbook);else card.prepend(textbook);
   }
  }
  function checkAdmin(){if(adminChecked)return;adminChecked=true;fetch('https://stream.saysaymusic.com/api/me',{credentials:'include'}).then(function(r){return r.json()}).then(function(out){adminAllowed=!!(out&&out.user&&String(out.user.role||'').toLowerCase()==='admin');addStudioLinks()}).catch(function(){})}
