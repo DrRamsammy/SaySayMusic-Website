@@ -1,3 +1,4 @@
+import {textbookAccessLink} from "./TextbookAccessLink.js";
 import desktopApp from "./PolishedUI.js";
 import mobileApp from "./PolishedUI.js";
 import lyricsBook from "./LyricsBook.js";
@@ -133,7 +134,7 @@ export default {async fetch(request,env,ctx){
  const type=response.headers.get("content-type")||"";
  if(!type.includes("text/html"))return response;
  let html=await response.text();
- const tag=(mobile?'':`<style id="ss-desktop-target">${DESKTOP_CSS}</style><script id="ss-desktop-target-js">${DESKTOP_JS}</script>`)+`<script id="ss-lyrics-studio-link">${STUDIO_BOOK_JS}</script>`;
+ const tag=(mobile?'':`<style id="ss-desktop-target">${DESKTOP_CSS}</style><script id="ss-desktop-target-js">${DESKTOP_JS}</script>`)+`<script id="ss-lyrics-studio-link">${STUDIO_BOOK_JS}</script>`+textbookAccessLink(env.TEXTBOOK_ACCESS_URL);
  html=html.includes("</head>")?html.replace("</head>",tag+"</head>"):tag+html;
  return new Response(html,{status:response.status,statusText:response.statusText,headers:response.headers});
 }};
