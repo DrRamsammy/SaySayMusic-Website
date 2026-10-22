@@ -77,15 +77,17 @@ const DESKTOP_JS = String.raw`
 })();
 `;
 
+const EDUCATION_NAV_CSS = '#ssProductNav #btnLearningGames,#ssProductNav #btnGameBuilder,#ssProductNav #btnDragDropMaker,#ssProductNav #ssTextbooksLink{display:none!important}';
+
 const STUDIO_BOOK_JS = String.raw`
 (function(){
  var adminAllowed=false,adminChecked=false;
  function addStudioLinks(){
   var nav=document.getElementById('ssProductNav');
-  if(nav&&!document.getElementById('ssTextbooksLink')){
-   var student=document.createElement('a');student.id='ssTextbooksLink';student.className='btn';
-   student.href='https://saysay-textbook-access.saysaydeducator.workers.dev/';
-   student.textContent='Textbooks';student.target='_blank';student.rel='noopener noreferrer';nav.appendChild(student);
+  if(nav&&!document.getElementById('ssEducationLink')){
+   var student=document.createElement('a');student.id='ssEducationLink';student.className='btn';
+   student.href='https://saysayeducation.com/';
+   student.textContent='SaySayEducation';student.target='_blank';student.rel='noopener noreferrer';nav.appendChild(student);
   }
   var list=document.getElementById('list');
   if(!list)return;
@@ -133,7 +135,7 @@ export default {async fetch(request,env,ctx){
  const type=response.headers.get("content-type")||"";
  if(!type.includes("text/html"))return response;
  let html=await response.text();
- const tag=(mobile?'':`<style id="ss-desktop-target">${DESKTOP_CSS}</style><script id="ss-desktop-target-js">${DESKTOP_JS}</script>`)+`<script id="ss-lyrics-studio-link">${STUDIO_BOOK_JS}</script>`;
+ const tag=`<style id="ss-education-nav">${EDUCATION_NAV_CSS}</style>`+(mobile?'':`<style id="ss-desktop-target">${DESKTOP_CSS}</style><script id="ss-desktop-target-js">${DESKTOP_JS}</script>`)+`<script id="ss-lyrics-studio-link">${STUDIO_BOOK_JS}</script>`;
  html=html.includes("</head>")?html.replace("</head>",tag+"</head>"):tag+html;
  return new Response(html,{status:response.status,statusText:response.statusText,headers:response.headers});
 }};
