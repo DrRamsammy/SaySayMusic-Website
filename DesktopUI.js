@@ -89,6 +89,7 @@ const STUDIO_BOOK_JS = String.raw`
    student.href='https://saysayeducation.com/';
    student.textContent='SaySayEducation';student.target='_blank';student.rel='noopener noreferrer';nav.appendChild(student);
   }
+  if(nav){['ssEducationLink','btnGlobal','btnMusicBuilder','btnStudio'].forEach(function(id){var button=document.getElementById(id);if(button&&button.parentElement===nav)nav.appendChild(button);});}
   var list=document.getElementById('list');
   if(!list)return;
   var card=list.querySelector('.studioCard');
