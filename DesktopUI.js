@@ -116,6 +116,14 @@ const STUDIO_BOOK_JS = String.raw`
    var lastLink=document.getElementById('ssFreeSongLink')||document.getElementById('ssLyricsBookLink');
    if(lastLink)lastLink.insertAdjacentElement('afterend',textbook);else card.prepend(textbook);
   }
+  if(adminAllowed&&!document.getElementById('ssMathCreatorLink')){
+   var math=document.createElement('a');math.id='ssMathCreatorLink';
+   math.href='https://saysayeducation.com/math/create';
+   math.textContent='Math Game Creator';math.className='btn primary';math.target='_blank';math.rel='noopener noreferrer';
+   math.style.cssText='display:inline-block;margin:10px 8px 10px 0;padding:12px 18px';
+   var previousLink=document.getElementById('ssTextbookAdminLink')||document.getElementById('ssFreeSongLink')||document.getElementById('ssLyricsBookLink');
+   if(previousLink)previousLink.insertAdjacentElement('afterend',math);else card.prepend(math);
+  }
  }
  function checkAdmin(){if(adminChecked)return;adminChecked=true;fetch('https://stream.saysaymusic.com/api/me',{credentials:'include'}).then(function(r){return r.json()}).then(function(out){adminAllowed=!!(out&&out.user&&String(out.user.role||'').toLowerCase()==='admin');addStudioLinks()}).catch(function(){})}
  function boot(){var list=document.getElementById('list');if(!list)return;new MutationObserver(addStudioLinks).observe(list,{childList:true,subtree:true});addStudioLinks();checkAdmin()}
