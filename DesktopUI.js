@@ -77,7 +77,7 @@ const DESKTOP_JS = String.raw`
 })();
 `;
 
-const EDUCATION_NAV_CSS = '#ssProductNav #btnLearningGames,#ssProductNav #btnGameBuilder,#ssProductNav #btnDragDropMaker,#ssProductNav #ssTextbooksLink{display:none!important}';
+const EDUCATION_NAV_CSS = '#ssProductNav #btnLearningGames,#ssProductNav #btnGameBuilder,#ssProductNav #btnDragDropMaker{display:none!important}';
 
 const STUDIO_BOOK_JS = String.raw`
 (function(){
@@ -89,7 +89,13 @@ const STUDIO_BOOK_JS = String.raw`
    student.href='https://saysayeducation.com/';
    student.textContent='SaySayEducation';student.target='_blank';student.rel='noopener noreferrer';nav.appendChild(student);
   }
-  if(nav){['ssEducationLink','btnGlobal','btnMusicBuilder','btnStudio'].forEach(function(id){var button=document.getElementById(id);if(button&&button.parentElement===nav)nav.appendChild(button);});}
+  if(nav){
+   var textbooks=document.getElementById('ssTextbooksLink');
+   if(!textbooks){textbooks=document.createElement('a');textbooks.id='ssTextbooksLink';textbooks.className='btn';nav.prepend(textbooks);}
+   textbooks.href='https://saysay-textbook-access.saysaydeducator.workers.dev/';
+   textbooks.textContent='Textbooks';textbooks.target='_blank';textbooks.rel='noopener noreferrer';
+  }
+  if(nav){['ssTextbooksLink','ssEducationLink','btnGlobal','btnMusicBuilder','btnStudio'].forEach(function(id){var button=document.getElementById(id);if(button&&button.parentElement===nav)nav.appendChild(button);});}
   var list=document.getElementById('list');
   if(!list)return;
   var card=list.querySelector('.studioCard');
