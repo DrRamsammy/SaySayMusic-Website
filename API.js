@@ -1072,7 +1072,7 @@ async function apiAuthRegister(request, env) {
   return withCors(request, new Response(resp.body, { status: 200, headers: h }));
 }
 
-async function apiAuthLogin(request, env) {
+async function apiAuthLogin(request, env, ctx) {
   let body;
   try {
     body = await request.json();
@@ -1131,23 +1131,28 @@ async function apiAuthLogin(request, env) {
   const h = new Headers(resp.headers);
   h.append("Set-Cookie", setSessionCookie(token));
 
-  try {
-    await fetch("https://teachers.saysayeducation.com/api/business/event", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        event_type: "music_user_active",
-        product: "music",
-        visitor_id: user.id,
-        subject_id: "account_login",
-        source: "music_login"
-      })
-    });
-  } catch {}
-  await syncMetricsAccount(env, user);
-  if (String(user.role || "").toLowerCase() === "admin") {
-    await syncAllMusicAccounts(env);
-  }
+  // Reporting must not hold the session cookie and successful login response.
+  ctx.waitUntil((async () => {
+    try {
+      await fetch("https://teachers.saysayeducation.com/api/business/event", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          event_type: "music_user_active",
+          product: "music",
+          visitor_id: user.id,
+          subject_id: "account_login",
+          source: "music_login"
+        })
+      });
+    } catch {}
+    await syncMetricsAccount(env, user);
+    if (String(user.role || "").toLowerCase() === "admin") {
+      await syncAllMusicAccounts(env);
+    }
+  })().catch((error) => {
+    console.error("Login reporting failed", error);
+  }));
 
   return withCors(request, new Response(resp.body, { status: 200, headers: h }));
 }
@@ -4897,9 +4902,9 @@ async function apiAdminSyncR2(request, env) {
 export default {
   async fetch(request, env, ctx) {
     try {
-      await ensureSchema(env);
-
       if (request.method === "OPTIONS") return handleOptions(request);
+
+      await ensureSchema(env);
 
       const url = new URL(request.url);
       const path = url.pathname;
@@ -4950,7 +4955,7 @@ if (path === "/api/me/daily-usage" && request.method === "POST") {
 }
       if (path === "/api/login" && request.method === "POST") return apiLogin(request, env);
       if (path === "/api/auth/register" && request.method === "POST") return apiAuthRegister(request, env);
-      if (path === "/api/auth/login" && request.method === "POST") return apiAuthLogin(request, env);
+      if (path === "/api/auth/login" && request.method === "POST") return apiAuthLogin(request, env, ctx);
 
       if (path === "/api/logout" && request.method === "POST") return apiLogout(request, env);
       if (path === "/api/auth/logout" && request.method === "POST") return apiLogout(request, env);
