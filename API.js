@@ -783,7 +783,15 @@ async function getNextAlbumTrackIndex(env, albumId) {
 }
 
 async function listAlbumFolderObjects(env, albumPath, limit) {
-  return await r2ListAll(env, normalizeAlbumPath(albumPath) + "/", limit || 1000, undefined);
+  const objects = [];
+  let cursor;
+  do {
+    const page = await r2ListAll(env, normalizeAlbumPath(albumPath) + "/", Math.min(limit || 1000, 1000), cursor);
+    objects.push(...(page.objects || []));
+    cursor = page.truncated ? page.cursor : undefined;
+    if (page.truncated && !cursor) throw new Error("R2 listing is incomplete; retry the album scan.");
+  } while (cursor);
+  return { objects };
 }
 
 async function getOrCreateAlbum(env, albumPath, artist, subject, gradeLevel, gradeGroup, albumTitleOverride, coverKey, userId, status) {
@@ -4355,6 +4363,18 @@ async function apiAdminUploadCover(request, env) {
   }
 }
 
+async function resolveAlbumToolPath(env, ref) {
+  const value = normalizeAlbumPath(ref);
+  if (!/^[a-f0-9]{40}$/i.test(value)) return value;
+  const row = await getAlbumById(env, value);
+  if (!row) throw new Error("Album ID not found. Paste the R2 folder prefix.");
+  const cover = String(row.cover_key || "");
+  if (cover.lastIndexOf("/") < 0) throw new Error("Album has no folder reference. Paste the R2 folder prefix.");
+  const path = cover.slice(0, cover.lastIndexOf("/"));
+  if (await sha1Hex("album:" + path) !== value) throw new Error("Album folder could not be verified. Paste the R2 folder prefix.");
+  return path;
+}
+
 async function apiAdminRebuildAlbumCover(request, env) {
   try {
     const auth = await requireAdminOrCreator(request, env);
@@ -4369,7 +4389,7 @@ async function apiAdminRebuildAlbumCover(request, env) {
     const album = normalizeAlbumRef(body, u);
     if (!album) return withCors(request, bad("album required", 400));
 
-    const safeAlbumPath = normalizeAlbumPath(album);
+    const safeAlbumPath = await resolveAlbumToolPath(env, album);
     const res = await listAlbumFolderObjects(env, safeAlbumPath, 1000);
     const objects = res.objects || [];
 
@@ -4442,7 +4462,7 @@ async function apiAdminRelinkAlbumTracks(request, env) {
 
     if (!album) return withCors(request, bad("album required", 400));
 
-    const safeAlbumPath = normalizeAlbumPath(album);
+    const safeAlbumPath = await resolveAlbumToolPath(env, album);
     const albumId = await sha1Hex("album:" + safeAlbumPath);
 
     const res = await listAlbumFolderObjects(env, safeAlbumPath, 2000);
@@ -4459,23 +4479,30 @@ async function apiAdminRelinkAlbumTracks(request, env) {
     const bestCover = pickCoverKey(imageKeys);
     const cat = deriveCatalogInfo(safeAlbumPath);
 
-    await getOrCreateAlbum(
-      env,
-      safeAlbumPath,
-      "SaySay",
-      cat.subject || null,
-      cat.grade_level || null,
-      cat.grade_group || null,
-      null,
-      bestCover || null,
-      auth.user ? auth.user.id : null,
-      "draft"
-    );
+    const existingAlbum = await getAlbumById(env, albumId);
+    if (!existingAlbum) {
+      await getOrCreateAlbum(
+        env,
+        safeAlbumPath,
+        "SaySay",
+        cat.subject || null,
+        cat.grade_level || null,
+        cat.grade_group || null,
+        null,
+        bestCover || null,
+        auth.user ? auth.user.id : null,
+        "draft"
+      );
+    }
+    const targetAlbum = existingAlbum || await getAlbumById(env, albumId);
 
     if (clearFirst) {
       await env.DB.prepare("DELETE FROM album_tracks WHERE album_id = ?").bind(albumId).run();
     }
 
+    const existingLinks = await env.DB.prepare("SELECT track_id, track_index FROM album_tracks WHERE album_id = ?").bind(albumId).all();
+    const linksById = new Map((existingLinks.results || []).map(row => [row.track_id, row.track_index]));
+    let nextIndex = Math.max(0, ...(existingLinks.results || []).map(row => Number(row.track_index) || 0)) + 1;
     const existingIdByAudioKey = await fetchExistingTrackIdsByAudioKey(env, audioKeys);
 
     let createdTracks = 0;
@@ -4487,8 +4514,7 @@ async function apiAdminRelinkAlbumTracks(request, env) {
       const file = basename(audioKey);
       const existingId = existingIdByAudioKey[audioKey];
       const trackId = existingId ? existingId : await sha1Hex("track:" + audioKey);
-      const idx = parseTrackIndex(file);
-      const trackIndex = idx !== null ? idx : (i + 1);
+      const trackIndex = linksById.has(trackId) ? linksById.get(trackId) : nextIndex++;
       const title = trackTitleFromFilename(file);
 
       if (!existingId) {
@@ -4497,14 +4523,14 @@ async function apiAdminRelinkAlbumTracks(request, env) {
         ).bind(
           trackId,
           title,
-          "SaySay",
+          targetAlbum.artist || "SaySay",
           audioKey,
-          "system",
-          cat.subject || null,
-          cat.grade_level || null,
-          cat.grade_group || null,
-          null,
-          "published"
+          targetAlbum.user_id || (auth.user && auth.user.id) || "system",
+          targetAlbum.subject || cat.subject || null,
+          targetAlbum.grade_level || cat.grade_level || null,
+          targetAlbum.grade_group || cat.grade_group || null,
+          albumId,
+          targetAlbum.status || "draft"
         ).run();
         createdTracks += 1;
       }
@@ -4524,7 +4550,7 @@ async function apiAdminRelinkAlbumTracks(request, env) {
       });
     }
 
-    if (bestCover) {
+    if (bestCover && !targetAlbum.cover_key) {
       await env.DB.prepare("UPDATE albums SET cover_key = ? WHERE id = ?").bind(bestCover, albumId).run();
     }
 
@@ -4567,7 +4593,7 @@ async function apiAdminAlbumAudit(request, env) {
     const album = normalizeAlbumRef(body, url);
     if (!album) return withCors(request, bad("album required", 400));
 
-    const safeAlbumPath = normalizeAlbumPath(album);
+    const safeAlbumPath = await resolveAlbumToolPath(env, album);
     const albumId = await sha1Hex("album:" + safeAlbumPath);
 
     const albumRow = await getAlbumById(env, albumId);
